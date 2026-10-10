@@ -28,6 +28,42 @@ export async function generateCode(graph: any) {
   return res.json();
 }
 
+export async function runAudit(code: string, graph: any) {
+  const res = await fetch(`${API_BASE}/jobs/audit`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ code, graph }),
+  });
+  return res.json();
+}
+
+export async function runGasAnalysis(code: string) {
+  const res = await fetch(`${API_BASE}/jobs/gas`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ code }),
+  });
+  return res.json();
+}
+
+export async function runPermissions(graph: any) {
+  const res = await fetch(`${API_BASE}/jobs/permissions`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ graph }),
+  });
+  return res.json();
+}
+
+export async function compileContract(files: Record<string, string>) {
+  const res = await fetch(`${API_BASE}/jobs/compile`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ files }),
+  });
+  return res.json();
+}
+
 export async function promptToGraph(prompt: string) {
   const res = await fetch(`${API_BASE}/ai/prompt-to-graph`, {
     method: 'POST',
@@ -39,5 +75,14 @@ export async function promptToGraph(prompt: string) {
 
 export async function fetchConcepts() {
   const res = await fetch(`${API_BASE}/concepts`);
+  return res.json();
+}
+
+export async function generateReport(payload: any) {
+  const res = await fetch(`${API_BASE}/reports/generate`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
   return res.json();
 }

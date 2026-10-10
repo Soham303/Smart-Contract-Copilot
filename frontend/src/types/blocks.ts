@@ -1,6 +1,7 @@
 export interface PortSpec {
   name: string;
   type: string;
+  description?: string;
 }
 
 export interface PropSpec {
@@ -10,12 +11,14 @@ export interface PropSpec {
   max?: number;
   values?: string[];
   description?: string;
+  required?: boolean;
 }
 
 export interface BlockSpec {
   type: string;
   category: 'Token' | 'NFT' | 'Finance' | 'Governance' | 'Access' | 'Logic';
   title: string;
+  description?: string;
   ports: {
     in: PortSpec[];
     out: PortSpec[];
