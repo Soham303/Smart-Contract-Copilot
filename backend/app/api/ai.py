@@ -5,13 +5,15 @@ ai_bp = Blueprint("ai", __name__)
 
 @ai_bp.route("/prompt-to-graph", methods=["POST"])
 def prompt_to_graph():
-    """Prompt in, validated block graph and preview diff out (PRD FR-6.1 - 6.7)."""
+    """Active AI generation endpoint: prompt in, autonomously generated block graph & diff preview out (PRD FR-6.1 - 6.7)."""
     payload = request.get_json() or {}
     prompt = payload.get("prompt", "")
+    api_key = payload.get("apiKey", None)
+
     if not prompt:
         return jsonify({"error": {"code": "EMPTY_PROMPT", "message": "Prompt text is required"}}), 400
 
-    graph, diff = ai_prompt_service.generate_graph(prompt)
+    graph, diff = ai_prompt_service.generate_graph(prompt, api_key=api_key)
     return jsonify({
         "graph": graph,
         "diff": diff
