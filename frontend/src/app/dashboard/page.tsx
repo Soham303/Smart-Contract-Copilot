@@ -78,6 +78,51 @@ export default function DashboardPage() {
         </Link>
       </div>
 
+      {/* Dedicated USP Highlight Banner */}
+      <div
+        style={{
+          background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.12) 0%, rgba(234, 88, 12, 0.08) 100%)',
+          border: '1px solid rgba(245, 158, 11, 0.35)',
+          borderRadius: '12px',
+          padding: '1.5rem 1.75rem',
+          marginBottom: '2.5rem',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          gap: '1.5rem',
+          flexWrap: 'wrap',
+        }}
+      >
+        <div style={{ flex: 1, minWidth: '280px' }}>
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '0.75rem', fontWeight: 700, color: '#fbbf24', textTransform: 'uppercase', marginBottom: '4px' }}>
+            <span>⚡ Standalone USP</span>
+            <span>•</span>
+            <span>Measured Aptos Gas Reduction</span>
+          </div>
+          <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#fff', marginBottom: '4px' }}>
+            Gas Optimizer Studio
+          </h3>
+          <p style={{ color: '#cbd5e1', fontSize: '0.88rem', lineHeight: 1.5 }}>
+            Upload any <code style={{ color: '#fbbf24' }}>.move</code> contract or load from your canvas session. Inspect bytecode simulation costs per function and apply verified optimizations with live diff previews.
+          </p>
+        </div>
+        <Link
+          href="/gas-optimizer"
+          id="dashboard-gas-opt-btn"
+          style={{
+            padding: '0.75rem 1.5rem',
+            background: 'linear-gradient(135deg, #f59e0b, #d97706)',
+            color: '#000',
+            fontWeight: 800,
+            borderRadius: '8px',
+            fontSize: '0.88rem',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          Open Gas Optimizer Studio →
+        </Link>
+      </div>
+
       {/* Templates Grid */}
       <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#fff', marginBottom: '1rem' }}>
         Standard Contract Templates (Ready to Build & Deploy)

@@ -132,6 +132,9 @@ export default function WorkspacePage({ params }: { params: { projectId: string 
         setSourceMap(genRes.sourceMap || {});
 
         const code = genRes.files[Object.keys(genRes.files)[1]] || genRes.files[Object.keys(genRes.files)[0]] || '';
+        if (code && typeof window !== 'undefined') {
+          localStorage.setItem('scc_latest_code', code);
+        }
         const [auditRes, gasRes] = await Promise.all([
           runAudit(code, graph),
           runGasAnalysis(code),
@@ -318,44 +321,65 @@ export default function WorkspacePage({ params }: { params: { projectId: string 
     }
   };
 
+  const handleOpenInGasOptimizer = () => {
+    const code = generatedFiles[Object.keys(generatedFiles)[1]] || generatedFiles[Object.keys(generatedFiles)[0]] || '';
+    if (code && typeof window !== 'undefined') {
+      localStorage.setItem('scc_latest_code', code);
+    }
+    window.location.href = '/gas-optimizer';
+  };
+
   return (
-    <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', background: 'var(--bg-primary)' }}>
-      {/* Top bar (PRD 20.1) */}
-      <header style={{ height: '56px', borderBottom: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 1rem', background: 'var(--bg-secondary)', zIndex: 20 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-          <span style={{ fontWeight: 800, letterSpacing: '-0.02em', background: 'linear-gradient(to right, #ffffff, #93c5fd)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', fontSize: '1.05rem' }}>
-            Smart Contract Copilot
+    <div style={{ height: 'calc(100vh - 60px)', display: 'flex', flexDirection: 'column', background: 'var(--bg-primary)' }}>
+      {/* Workspace Sub-header with Quick Actions */}
+      <header style={{ height: '52px', borderBottom: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 1.25rem', background: '#0b0f19', zIndex: 20 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+          <span style={{ fontSize: '0.88rem', fontWeight: 700, color: '#f1f5f9' }}>
+            Workspace: <span style={{ color: '#60a5fa' }}>{params.projectId || 'demo'}</span>
           </span>
-          <span style={{ color: 'var(--text-dim)' }}>/</span>
-          <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>Aptos Testnet</span>
+          <span style={{ color: 'var(--text-dim)' }}>•</span>
+          <span style={{ color: '#10b981', fontSize: '0.78rem', display: 'flex', alignItems: 'center', gap: '5px' }}>
+            <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#10b981' }} />
+            Live Sync Active
+          </span>
+          <span style={{ color: 'var(--text-dim)' }}>•</span>
+          <span style={{ color: 'var(--text-muted)', fontSize: '0.78rem' }}>{nodes.length} blocks connected</span>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           <button
             onClick={() => setIsPromptDrawerOpen(true)}
             id="ai-prompt-btn"
-            style={{ background: 'rgba(139, 92, 246, 0.15)', color: '#c084fc', border: '1px solid rgba(139, 92, 246, 0.4)', padding: '6px 14px', borderRadius: '6px', fontWeight: 600, fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '6px' }}
+            style={{ background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.25), rgba(59, 130, 246, 0.2))', color: '#c084fc', border: '1px solid rgba(139, 92, 246, 0.5)', padding: '5px 12px', borderRadius: '6px', fontWeight: 600, fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}
           >
             ✨ AI Prompt-to-Blocks
           </button>
           <button
+            onClick={handleOpenInGasOptimizer}
+            id="open-gas-optimizer-btn"
+            title="Transfer contract to dedicated Gas Optimizer Studio"
+            style={{ background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.2), rgba(234, 88, 12, 0.15))', color: '#fbbf24', border: '1px solid rgba(245, 158, 11, 0.4)', padding: '5px 12px', borderRadius: '6px', fontWeight: 600, fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}
+          >
+            ⚡ Optimize Gas (USP)
+          </button>
+          <button
             onClick={() => triggerPipeline(nodes, edges)}
             id="check-btn"
-            style={{ background: '#3b82f6', color: '#fff', border: 'none', padding: '6px 14px', borderRadius: '6px', fontWeight: 600, fontSize: '0.85rem' }}
+            style={{ background: '#3b82f6', color: '#fff', border: 'none', padding: '5px 12px', borderRadius: '6px', fontWeight: 600, fontSize: '0.8rem', cursor: 'pointer' }}
           >
             Check (Verify)
           </button>
           <button
             onClick={handleExportReport}
             id="report-btn"
-            style={{ background: 'rgba(255, 255, 255, 0.08)', color: '#fff', border: '1px solid var(--border-color)', padding: '6px 14px', borderRadius: '6px', fontSize: '0.85rem' }}
+            style={{ background: 'rgba(255, 255, 255, 0.08)', color: '#fff', border: '1px solid var(--border-color)', padding: '5px 12px', borderRadius: '6px', fontSize: '0.8rem', cursor: 'pointer' }}
           >
             Export PDF Report
           </button>
           <button
             onClick={() => setIsDeployModalOpen(true)}
             id="deploy-btn"
-            style={{ background: '#10b981', color: '#fff', border: 'none', padding: '6px 14px', borderRadius: '6px', fontWeight: 600, fontSize: '0.85rem' }}
+            style={{ background: '#10b981', color: '#fff', border: 'none', padding: '5px 12px', borderRadius: '6px', fontWeight: 600, fontSize: '0.8rem', cursor: 'pointer' }}
           >
             Deploy (Testnet)
           </button>

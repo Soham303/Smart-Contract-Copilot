@@ -1,5 +1,8 @@
 import type { Metadata } from 'next';
 import '../styles/globals.css';
+import { AuthProvider } from '../components/auth/AuthContext';
+import { Header } from '../components/common/Header';
+import { AuthModal } from '../components/auth/AuthModal';
 
 export const metadata: Metadata = {
   title: 'Smart Contract Copilot - The Canva for Move Smart Contracts',
@@ -14,7 +17,11 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
-        <main>{children}</main>
+        <AuthProvider>
+          <Header />
+          <main>{children}</main>
+          <AuthModal />
+        </AuthProvider>
       </body>
     </html>
   );

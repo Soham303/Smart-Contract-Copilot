@@ -1,5 +1,49 @@
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 
+export function getStoredToken(): string | null {
+  if (typeof window === 'undefined') return null;
+  return localStorage.getItem('scc_token');
+}
+
+export function setStoredToken(token: string) {
+  if (typeof window !== 'undefined') {
+    localStorage.setItem('scc_token', token);
+  }
+}
+
+export function removeStoredToken() {
+  if (typeof window !== 'undefined') {
+    localStorage.removeItem('scc_token');
+    localStorage.removeItem('scc_user');
+  }
+}
+
+export async function loginUser(email: string, password: string) {
+  const res = await fetch(`${API_BASE}/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, password }),
+  });
+  return res.json();
+}
+
+export async function registerUser(email: string, password: string, name?: string) {
+  const res = await fetch(`${API_BASE}/auth/register`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, password, name }),
+  });
+  return res.json();
+}
+
+export async function getAuthProfile() {
+  const token = getStoredToken();
+  const res = await fetch(`${API_BASE}/auth/me`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  return res.json();
+}
+
 export async function fetchBlocks() {
   const res = await fetch(`${API_BASE}/blocks`);
   return res.json();
@@ -64,11 +108,11 @@ export async function compileContract(files: Record<string, string>) {
   return res.json();
 }
 
-export async function promptToGraph(prompt: string) {
+export async function promptToGraph(prompt: string, apiKey?: string) {
   const res = await fetch(`${API_BASE}/ai/prompt-to-graph`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ prompt }),
+    body: JSON.stringify({ prompt, apiKey }),
   });
   return res.json();
 }
