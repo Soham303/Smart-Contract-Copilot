@@ -1,0 +1,12 @@
+flask==3.0.3
+flask-cors==4.0.1
+flask-jwt-extended==4.6.0
+pydantic==2.8.2
+jinja2==3.1.4
+pymongo==4.8.0
+redis==5.0.7
+rq==1.16.2
+weasyprint==62.3
+requests==2.32.3
+pyyaml==6.0.1
+pytest==8.2.2

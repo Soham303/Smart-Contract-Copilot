@@ -1,0 +1,66 @@
+[
+  {
+    "id": "signer",
+    "name": "Signer",
+    "summary": "Represents the authenticated caller of a transaction in Aptos Move.",
+    "codeExample": "public entry fun execute(caller: &signer) { ... }",
+    "securityNote": "Always authenticate caller addresses using signer::address_of(caller) to prevent unauthorized access.",
+    "docUrl": "https://aptos.dev/concepts/resources#signer"
+  },
+  {
+    "id": "capability",
+    "name": "Capability Pattern",
+    "summary": "A Move resource that grants exclusive authority to perform privileged actions.",
+    "codeExample": "struct MintCapability has key, store { }",
+    "securityNote": "Never expose capabilities via public non-entry functions, otherwise any module can acquire them.",
+    "docUrl": "https://aptos.dev/standards/caps"
+  },
+  {
+    "id": "resource",
+    "name": "Resource",
+    "summary": "A struct with the `key` ability that exists in global storage under an account address.",
+    "codeExample": "struct Treasury has key { balance: u64 }",
+    "securityNote": "Resources cannot be silently discarded or duplicated, preventing asset loss bugs common in other chains.",
+    "docUrl": "https://aptos.dev/concepts/resources"
+  },
+  {
+    "id": "abilities",
+    "name": "Abilities (copy, drop, store, key)",
+    "summary": "Type gates controlling whether a value can be copied, dropped, stored in global storage, or used as a key.",
+    "codeExample": "struct Coin has store { value: u64 }",
+    "securityNote": "Giving `drop` or `copy` to value-bearing tokens allows accidental destruction or unauthorized inflation.",
+    "docUrl": "https://aptos.dev/concepts/base-types#abilities"
+  },
+  {
+    "id": "acquires",
+    "name": "Acquires Annotation",
+    "summary": "Explicit function annotation declaring which global resources are read or mutated.",
+    "codeExample": "fun transfer(from: address) acquires Treasury { ... }",
+    "securityNote": "Move compiler enforces acquires declarations statically to prevent reentrancy and data race issues.",
+    "docUrl": "https://aptos.dev/concepts/functions#acquires"
+  },
+  {
+    "id": "entry-function",
+    "name": "Entry Function",
+    "summary": "Functions that can be invoked directly as a transaction payload by external accounts or wallets.",
+    "codeExample": "public entry fun mint(account: &signer, amount: u64) { ... }",
+    "securityNote": "Entry functions must validate all user inputs (zero amounts, unauthorized callers).",
+    "docUrl": "https://aptos.dev/concepts/functions#entry-functions"
+  },
+  {
+    "id": "fungible-asset",
+    "name": "Fungible Asset Framework",
+    "summary": "Aptos standard for digital commodities, tokens, and currencies using Object-based architecture.",
+    "codeExample": "primary_fungible_store::deposit(recipient, coins);",
+    "securityNote": "Leverage primary stores to avoid custom balance tracking bugs and ensure wallet compatibility.",
+    "docUrl": "https://aptos.dev/standards/fungible-asset"
+  },
+  {
+    "id": "object",
+    "name": "Move Objects",
+    "summary": "Aptos core primitive providing globally addressable, extensible containers for resources and capabilities.",
+    "codeExample": "let constructor_ref = object::create_object(caller_addr);",
+    "securityNote": "Manage DeleteRef and TransferRef carefully to prevent unwanted object transfers.",
+    "docUrl": "https://aptos.dev/standards/object"
+  }
+]

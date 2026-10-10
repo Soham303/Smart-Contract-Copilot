@@ -1,0 +1,46 @@
+services:
+  mongodb:
+    image: mongo:7.0
+    container_name: scc-mongodb
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+
+  redis:
+    image: redis:7.2-alpine
+    container_name: scc-redis
+    ports:
+      - "6379:6379"
+
+  api:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+    container_name: scc-backend
+    ports:
+      - "5000:5000"
+    environment:
+      - FLASK_ENV=development
+      - MONGO_URI=mongodb://mongodb:27017/smart_contract_copilot
+      - REDIS_URL=redis://redis:6379/0
+      - JWT_SECRET_KEY=dev-secret-key-change-in-prod
+    depends_on:
+      - mongodb
+      - redis
+
+  worker:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+    container_name: scc-worker
+    command: python -m app.workers.tasks
+    environment:
+      - MONGO_URI=mongodb://mongodb:27017/smart_contract_copilot
+      - REDIS_URL=redis://redis:6379/0
+    depends_on:
+      - mongodb
+      - redis
+
+volumes:
+  mongo_data:

@@ -1,0 +1,23 @@
+# Ephemeral Sandbox Container with Aptos CLI and cached frameworks (PRD Section 11 & 19)
+FROM ubuntu:22.04
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update && apt-get install -y \
+    curl \
+    git \
+    ca-certificates \
+    libssl-dev \
+    && rm -rf /var/lib/apt/lists/
+
+# Create non-root user for sandboxed compilation
+RUN useradd -m -s /bin/bash sandbox
+WORKDIR /workspace
+RUN chown -R sandbox:sandbox /workspace
+
+USER sandbox
+
+# Aptos CLI binary will be mounted or installed here
+ENV PATH="/workspace/.aptos/bin:${PATH}"
+
+CMD ["/bin/bash"]

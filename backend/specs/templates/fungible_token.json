@@ -1,0 +1,53 @@
+{
+  "id": "template_fungible_token",
+  "name": "Fungible Token",
+  "category": "Token",
+  "description": "Standard Aptos Fungible Asset with admin mint control and transfer capabilities.",
+  "graph": {
+    "schemaVersion": "1.0",
+    "target": "aptos-move",
+    "meta": {
+      "name": "MyToken",
+      "moduleName": "my_token"
+    },
+    "blocks": [
+      {
+        "id": "b1",
+        "type": "token.fungible",
+        "props": {
+          "name": "AptoCoin",
+          "symbol": "APTO",
+          "decimals": 8,
+          "maxSupply": 1000000
+        }
+      },
+      {
+        "id": "b2",
+        "type": "token.mint_control",
+        "props": {
+          "cap": 1000000,
+          "managedBy": "owner"
+        }
+      },
+      {
+        "id": "b3",
+        "type": "access.owner",
+        "props": {}
+      }
+    ],
+    "edges": [
+      {
+        "from": "b2",
+        "fromPort": "mint_control",
+        "to": "b1",
+        "toPort": "mint"
+      },
+      {
+        "from": "b3",
+        "fromPort": "owner",
+        "to": "b2",
+        "toPort": "admin"
+      }
+    ]
+  }
+}
