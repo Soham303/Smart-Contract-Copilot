@@ -1,0 +1,44 @@
+{
+  "id": "template_staking",
+  "name": "Staking & Rewards",
+  "category": "Finance",
+  "description": "Yield-generating staking pool with 7-day lockup duration and continuous reward distribution.",
+  "graph": {
+    "schemaVersion": "1.0",
+    "target": "aptos-move",
+    "meta": {
+      "name": "YieldStaking",
+      "moduleName": "yield_staking"
+    },
+    "blocks": [
+      {
+        "id": "b1",
+        "type": "finance.staking",
+        "props": {
+          "rewardRatePerSec": 10,
+          "lockupDurationSec": 604800
+        }
+      },
+      {
+        "id": "b2",
+        "type": "access.pausable",
+        "props": {
+          "initiallyPaused": false
+        }
+      },
+      {
+        "id": "b3",
+        "type": "access.owner",
+        "props": {}
+      }
+    ],
+    "edges": [
+      {
+        "from": "b3",
+        "fromPort": "owner",
+        "to": "b2",
+        "toPort": "admin"
+      }
+    ]
+  }
+}

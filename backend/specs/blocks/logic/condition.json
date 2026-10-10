@@ -1,0 +1,21 @@
+{
+  "type": "logic.condition",
+  "category": "Logic",
+  "title": "Condition (require)",
+  "description": "Enforces an assert/require condition check with a custom Move error abort code.",
+  "ports": {
+    "in": [
+      { "name": "trigger", "type": "LogicGate", "description": "Trigger flow in" }
+    ],
+    "out": [
+      { "name": "next", "type": "LogicGate", "description": "Flow out if condition holds true" }
+    ]
+  },
+  "props": {
+    "expression": { "type": "string", "default": "amount > 0", "description": "Logical expression to assert", "required": true },
+    "errorMessage": { "type": "string", "default": "INVALID_AMOUNT", "description": "Error code name on abort", "required": true }
+  },
+  "concepts": ["entry-function"],
+  "permissionEffects": [],
+  "auditHints": ["assert-check", "sc008-check"]
+}

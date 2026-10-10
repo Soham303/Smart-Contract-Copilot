@@ -1,0 +1,24 @@
+{
+  "type": "nft.reveal_metadata",
+  "category": "NFT",
+  "title": "Reveal / Metadata",
+  "description": "Enables pre-reveal placeholder URIs and a delayed or admin-triggered metadata reveal.",
+  "ports": {
+    "in": [
+      { "name": "admin", "type": "AccessGate", "description": "Admin capable of triggering metadata reveal" }
+    ],
+    "out": [
+      { "name": "metadata", "type": "MetadataConfig", "description": "Connect to NFT Collection metadata port" }
+    ]
+  },
+  "props": {
+    "placeholderUri": { "type": "string", "default": "https://ipfs.io/ipfs/placeholder.json", "description": "Unrevealed metadata URI" },
+    "baseUri": { "type": "string", "default": "https://ipfs.io/ipfs/revealed/", "description": "Revealed base URI" },
+    "isRevealed": { "type": "boolean", "default": false, "description": "Initial reveal status" }
+  },
+  "concepts": ["object", "capability"],
+  "permissionEffects": [
+    { "action": "Reveal metadata", "actor": "Owner/Admin" }
+  ],
+  "auditHints": ["unrevealed-check"]
+}

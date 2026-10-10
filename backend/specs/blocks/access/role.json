@@ -1,0 +1,22 @@
+{
+  "type": "access.role",
+  "category": "Access",
+  "title": "Role",
+  "description": "Role-based access control allowing designated role members to execute specific actions.",
+  "ports": {
+    "in": [
+      { "name": "manager", "type": "AccessGate", "description": "Admin who can grant and revoke this role" }
+    ],
+    "out": [
+      { "name": "role_gate", "type": "AccessGate", "description": "Connect to actions guarded by this role" }
+    ]
+  },
+  "props": {
+    "roleName": { "type": "string", "default": "OPERATOR", "description": "Role identifier name", "required": true }
+  },
+  "concepts": ["capability", "resource", "signer"],
+  "permissionEffects": [
+    { "action": "Grant / Revoke role", "actor": "Owner/Admin" }
+  ],
+  "auditHints": ["rbac-check"]
+}

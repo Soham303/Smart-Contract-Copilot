@@ -1,0 +1,25 @@
+{
+  "type": "finance.escrow",
+  "category": "Finance",
+  "title": "Escrow",
+  "description": "Holds funds in trust until predefined release conditions are met, with refund timeout.",
+  "ports": {
+    "in": [
+      { "name": "arbiter", "type": "AccessGate", "description": "Optional third-party arbiter" }
+    ],
+    "out": [
+      { "name": "escrow_out", "type": "FinanceRef", "description": "Escrow balance reference" }
+    ]
+  },
+  "props": {
+    "beneficiary": { "type": "string", "default": "0x2", "description": "Recipient of released funds", "required": true },
+    "timeoutSec": { "type": "int", "default": 86400, "min": 300, "description": "Refund timeout duration in seconds" },
+    "autoRefundOnTimeout": { "type": "boolean", "default": true, "description": "Allow depositor refund after timeout" }
+  },
+  "concepts": ["resource", "signer", "acquires"],
+  "permissionEffects": [
+    { "action": "Release escrow funds", "actor": "Owner/Admin" },
+    { "action": "Refund escrow funds", "actor": "Anyone" }
+  ],
+  "auditHints": ["timeout-sanity", "sc011-check"]
+}

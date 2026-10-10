@@ -1,0 +1,18 @@
+{
+  "type": "logic.event_emit",
+  "category": "Logic",
+  "title": "Event Emit",
+  "description": "Emits an Aptos event struct on chain to facilitate indexing and off-chain telemetry.",
+  "ports": {
+    "in": [
+      { "name": "trigger", "type": "LogicGate", "description": "Trigger when event should fire" }
+    ],
+    "out": []
+  },
+  "props": {
+    "eventName": { "type": "string", "default": "TokenMintedEvent", "description": "Name of event struct", "required": true }
+  },
+  "concepts": ["resource", "abilities"],
+  "permissionEffects": [],
+  "auditHints": ["event-emission", "sc013-check"]
+}

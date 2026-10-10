@@ -1,0 +1,20 @@
+{
+  "type": "finance.payment_splitter",
+  "category": "Finance",
+  "title": "Payment Splitter",
+  "description": "Splits native APT or token payments proportionally among multiple payees according to shares.",
+  "ports": {
+    "in": [],
+    "out": [
+      { "name": "splitter_out", "type": "FinanceRef", "description": "Splitter reference" }
+    ]
+  },
+  "props": {
+    "payeesCount": { "type": "int", "default": 2, "min": 2, "max": 10, "description": "Number of split payees" }
+  },
+  "concepts": ["resource", "signer"],
+  "permissionEffects": [
+    { "action": "Release payment share", "actor": "Anyone" }
+  ],
+  "auditHints": ["share-conservation"]
+}

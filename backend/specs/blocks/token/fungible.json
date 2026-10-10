@@ -1,0 +1,30 @@
+{
+  "type": "token.fungible",
+  "category": "Token",
+  "title": "Fungible Token",
+  "description": "Standard Aptos Fungible Asset managing fungible token metadata, supply, and balances.",
+  "ports": {
+    "in": [
+      { "name": "mint", "type": "MintGate", "description": "Connect Mint Control block" },
+      { "name": "burn", "type": "BurnGate", "description": "Connect Burn Control block" },
+      { "name": "pause", "type": "PauseGate", "description": "Connect Pause Control block" },
+      { "name": "fee", "type": "FeeConfig", "description": "Connect Transfer Fee block" }
+    ],
+    "out": [
+      { "name": "token", "type": "TokenRef", "description": "Reference to this fungible asset" }
+    ]
+  },
+  "props": {
+    "name": { "type": "string", "default": "MyToken", "description": "Token display name", "required": true },
+    "symbol": { "type": "string", "default": "MTK", "description": "Token symbol/ticker", "required": true },
+    "decimals": { "type": "int", "default": 8, "min": 0, "max": 18, "description": "Decimal precision", "required": true },
+    "iconUri": { "type": "string", "default": "https://aptos.dev/logo.png", "description": "Token icon URI" },
+    "projectUri": { "type": "string", "default": "https://example.com", "description": "Project website" },
+    "maxSupply": { "type": "int", "default": 1000000, "min": 1, "description": "Maximum supply cap", "required": true }
+  },
+  "concepts": ["fungible-asset", "object", "resource", "abilities"],
+  "permissionEffects": [
+    { "action": "Transfer tokens", "actor": "Anyone" }
+  ],
+  "auditHints": ["bounded-supply", "fungible-asset-standard"]
+}

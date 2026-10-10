@@ -1,0 +1,27 @@
+{
+  "type": "nft.collection",
+  "category": "NFT",
+  "title": "NFT Collection",
+  "description": "Aptos Digital Asset standard collection managing distinct digital tokens with metadata.",
+  "ports": {
+    "in": [
+      { "name": "royalty", "type": "RoyaltyConfig", "description": "Connect Royalty block" },
+      { "name": "mint", "type": "AccessGate", "description": "Connect Whitelist, Mint Rules, or Access block" },
+      { "name": "metadata", "type": "MetadataConfig", "description": "Connect Reveal / Metadata block" }
+    ],
+    "out": [
+      { "name": "collection", "type": "CollectionRef", "description": "Reference to this collection" }
+    ]
+  },
+  "props": {
+    "name": { "type": "string", "default": "AptosPunks", "description": "Collection name", "required": true },
+    "description": { "type": "string", "default": "Exclusive digital collectibles on Aptos", "description": "Description" },
+    "uri": { "type": "string", "default": "https://ipfs.io/ipfs/collection-uri", "description": "Collection icon/banner URI" },
+    "maxSupply": { "type": "int", "default": 10000, "min": 1, "description": "Maximum supply cap", "required": true }
+  },
+  "concepts": ["object", "resource", "abilities"],
+  "permissionEffects": [
+    { "action": "Mint NFT", "actor": "Anyone" }
+  ],
+  "auditHints": ["digital-asset-standard", "bounded-supply"]
+}

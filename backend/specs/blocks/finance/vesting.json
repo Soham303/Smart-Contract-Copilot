@@ -1,0 +1,23 @@
+{
+  "type": "finance.vesting",
+  "category": "Finance",
+  "title": "Vesting",
+  "description": "Gradually releases locked tokens over time with optional cliff schedule.",
+  "ports": {
+    "in": [],
+    "out": [
+      { "name": "vesting_out", "type": "FinanceRef", "description": "Vested token release reference" }
+    ]
+  },
+  "props": {
+    "beneficiary": { "type": "string", "default": "0x3", "description": "Beneficiary address", "required": true },
+    "cliffDurationSec": { "type": "int", "default": 2592000, "min": 0, "description": "Cliff period in seconds (e.g. 30 days)" },
+    "vestingDurationSec": { "type": "int", "default": 31536000, "min": 60, "description": "Total vesting duration in seconds (e.g. 1 year)" },
+    "totalAmount": { "type": "int", "default": 100000, "min": 1, "description": "Total token amount to vest", "required": true }
+  },
+  "concepts": ["resource", "signer", "acquires"],
+  "permissionEffects": [
+    { "action": "Claim vested tokens", "actor": "Anyone" }
+  ],
+  "auditHints": ["cliff-sanity", "linear-vesting"]
+}

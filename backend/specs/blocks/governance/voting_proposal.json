@@ -1,0 +1,24 @@
+{
+  "type": "governance.voting_proposal",
+  "category": "Governance",
+  "title": "Voting / Proposal",
+  "description": "On-chain decentralized proposal voting with configurable voting periods and quorum thresholds.",
+  "ports": {
+    "in": [],
+    "out": [
+      { "name": "gov_out", "type": "GovernanceRef", "description": "Governance reference" }
+    ]
+  },
+  "props": {
+    "quorumPct": { "type": "int", "default": 20, "min": 1, "max": 100, "description": "Minimum quorum required (percentage)" },
+    "votingPeriodSec": { "type": "int", "default": 259200, "min": 3600, "description": "Voting duration in seconds (e.g. 3 days)" },
+    "passThresholdPct": { "type": "int", "default": 51, "min": 50, "max": 100, "description": "Passing threshold percentage" }
+  },
+  "concepts": ["resource", "signer", "acquires"],
+  "permissionEffects": [
+    { "action": "Create proposal", "actor": "Anyone" },
+    { "action": "Cast vote", "actor": "Anyone" },
+    { "action": "Execute passed proposal", "actor": "Anyone" }
+  ],
+  "auditHints": ["quorum-validation"]
+}

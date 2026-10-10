@@ -1,0 +1,23 @@
+{
+  "type": "logic.time_lock",
+  "category": "Logic",
+  "title": "Time Lock",
+  "description": "Enforces a mandatory delay before sensitive administrative operations can take effect.",
+  "ports": {
+    "in": [
+      { "name": "action_in", "type": "AccessGate", "description": "Action proposed for execution" }
+    ],
+    "out": [
+      { "name": "action_out", "type": "AccessGate", "description": "Gated output after timelock matures" }
+    ]
+  },
+  "props": {
+    "delaySec": { "type": "int", "default": 86400, "min": 3600, "description": "Timelock delay in seconds (e.g. 24h)" }
+  },
+  "concepts": ["resource", "signer"],
+  "permissionEffects": [
+    { "action": "Queue timelocked action", "actor": "Owner/Admin" },
+    { "action": "Execute timelocked action", "actor": "Owner/Admin" }
+  ],
+  "auditHints": ["timelock-delay-sanity", "sc011-check"]
+}

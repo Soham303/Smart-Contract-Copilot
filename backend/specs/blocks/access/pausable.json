@@ -1,0 +1,23 @@
+{
+  "type": "access.pausable",
+  "category": "Access",
+  "title": "Pausable",
+  "description": "Global emergency circuit breaker capable of pausing contract execution.",
+  "ports": {
+    "in": [
+      { "name": "admin", "type": "AccessGate", "description": "Admin who can pause/unpause" }
+    ],
+    "out": [
+      { "name": "pause_gate", "type": "PauseGate", "description": "Connect to functions requiring pause check" }
+    ]
+  },
+  "props": {
+    "initiallyPaused": { "type": "boolean", "default": false, "description": "Start in paused state" }
+  },
+  "concepts": ["capability", "resource", "signer"],
+  "permissionEffects": [
+    { "action": "Pause contract", "actor": "Owner/Admin" },
+    { "action": "Unpause contract", "actor": "Owner/Admin" }
+  ],
+  "auditHints": ["circuit-breaker", "sc012-check"]
+}

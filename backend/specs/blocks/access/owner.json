@@ -1,0 +1,20 @@
+{
+  "type": "access.owner",
+  "category": "Access",
+  "title": "Owner / Admin",
+  "description": "Grants exclusive administrative control using Move capability pattern.",
+  "ports": {
+    "in": [],
+    "out": [
+      { "name": "owner", "type": "AccessGate", "description": "Connect to blocks requiring administrative authorization" }
+    ]
+  },
+  "props": {
+    "transferable": { "type": "boolean", "default": true, "description": "Can ownership be transferred to a new address?" }
+  },
+  "concepts": ["capability", "signer", "resource"],
+  "permissionEffects": [
+    { "action": "Transfer ownership", "actor": "Owner/Admin" }
+  ],
+  "auditHints": ["admin-rights", "centralization-check", "sc004-check"]
+}

@@ -1,5 +1,5 @@
 from typing import List, Dict, Any, Optional
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 
 class BlockNode(BaseModel):
     id: str
@@ -8,14 +8,13 @@ class BlockNode(BaseModel):
     position: Optional[Dict[str, float]] = None
 
 class Edge(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
     id: Optional[str] = None
     from_: str = Field(alias="from")
     fromPort: str
     to: str
     toPort: str
-
-    class Config:
-        populate_by_name = True
 
 class GraphMeta(BaseModel):
     name: str = "AptosContract"
@@ -24,11 +23,10 @@ class GraphMeta(BaseModel):
     author: Optional[str] = None
 
 class ContractGraph(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
     schemaVersion: str = "1.0"
     target: str = "aptos-move"
     meta: GraphMeta = Field(default_factory=GraphMeta)
     blocks: List[BlockNode] = Field(default_factory=list)
     edges: List[Edge] = Field(default_factory=list)
-
-    class Config:
-        populate_by_name = True

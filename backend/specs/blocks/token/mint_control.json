@@ -1,0 +1,24 @@
+{
+  "type": "token.mint_control",
+  "category": "Token",
+  "title": "Mint Control",
+  "description": "Defines who can mint tokens and under what supply caps.",
+  "ports": {
+    "in": [
+      { "name": "admin", "type": "AccessGate", "description": "Connect Owner or Role block for permission" }
+    ],
+    "out": [
+      { "name": "mint_control", "type": "MintGate", "description": "Connect to Fungible Token mint port" }
+    ]
+  },
+  "props": {
+    "cap": { "type": "int", "default": 1000000, "min": 1, "description": "Maximum mint cap", "required": true },
+    "rateLimit": { "type": "int", "default": 0, "min": 0, "description": "Max mint per day (0 for no limit)" },
+    "allowPublicMint": { "type": "boolean", "default": false, "description": "Allow anyone to mint (free mint)" }
+  },
+  "concepts": ["capability", "signer", "entry-function"],
+  "permissionEffects": [
+    { "action": "Mint tokens", "actor": "Owner/Admin" }
+  ],
+  "auditHints": ["privileged-mint", "sc001-check", "sc002-check"]
+}

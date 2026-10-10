@@ -1,0 +1,23 @@
+{
+  "type": "token.freeze_pause",
+  "category": "Token",
+  "title": "Freeze / Pause",
+  "description": "Emergency pause control to freeze individual accounts or entire token transfers.",
+  "ports": {
+    "in": [
+      { "name": "admin", "type": "AccessGate", "description": "Admin capable of triggering pause/freeze" }
+    ],
+    "out": [
+      { "name": "pause_control", "type": "PauseGate", "description": "Connect to Fungible Token pause port" }
+    ]
+  },
+  "props": {
+    "scope": { "type": "enum", "values": ["global", "account", "both"], "default": "global", "description": "Scope of the freeze mechanism" }
+  },
+  "concepts": ["capability", "object", "signer"],
+  "permissionEffects": [
+    { "action": "Pause transfers", "actor": "Owner/Admin" },
+    { "action": "Unpause transfers", "actor": "Owner/Admin" }
+  ],
+  "auditHints": ["emergency-stop", "sc012-check"]
+}

@@ -1,0 +1,22 @@
+{
+  "type": "token.burn",
+  "category": "Token",
+  "title": "Burn",
+  "description": "Allows token holders or contract admins to permanently destroy tokens.",
+  "ports": {
+    "in": [
+      { "name": "admin", "type": "AccessGate", "description": "Admin capability if admin burn enabled" }
+    ],
+    "out": [
+      { "name": "burn_control", "type": "BurnGate", "description": "Connect to Fungible Token burn port" }
+    ]
+  },
+  "props": {
+    "burner": { "type": "enum", "values": ["holder", "admin", "both"], "default": "holder", "description": "Who can burn tokens" }
+  },
+  "concepts": ["resource", "abilities", "entry-function"],
+  "permissionEffects": [
+    { "action": "Burn tokens", "actor": "Anyone" }
+  ],
+  "auditHints": ["burn-verification"]
+}

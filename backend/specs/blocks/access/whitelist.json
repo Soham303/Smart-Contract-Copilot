@@ -1,0 +1,22 @@
+{
+  "type": "access.whitelist",
+  "category": "Access",
+  "title": "Whitelist",
+  "description": "Restricts execution to explicit addresses recorded in a verification table or merkle tree.",
+  "ports": {
+    "in": [
+      { "name": "admin", "type": "AccessGate", "description": "Admin who manages whitelist addresses" }
+    ],
+    "out": [
+      { "name": "gate", "type": "AccessGate", "description": "Connect to gated action (e.g. mint)" }
+    ]
+  },
+  "props": {
+    "scope": { "type": "string", "default": "mint", "description": "Scope of the whitelist protection" }
+  },
+  "concepts": ["resource", "signer"],
+  "permissionEffects": [
+    { "action": "Update whitelist", "actor": "Owner/Admin" }
+  ],
+  "auditHints": ["whitelist-bound"]
+}

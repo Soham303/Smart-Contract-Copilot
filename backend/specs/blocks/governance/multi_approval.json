@@ -1,0 +1,22 @@
+{
+  "type": "governance.multi_approval",
+  "category": "Governance",
+  "title": "Multi-approval",
+  "description": "Lightweight multisig approval logic requiring M-of-N designated approvers before execution.",
+  "ports": {
+    "in": [],
+    "out": [
+      { "name": "approval_gate", "type": "AccessGate", "description": "Gate guarded by multi-approver quorum" }
+    ]
+  },
+  "props": {
+    "requiredApprovals": { "type": "int", "default": 2, "min": 2, "max": 10, "description": "Threshold number of approvers", "required": true },
+    "totalApprovers": { "type": "int", "default": 3, "min": 2, "max": 10, "description": "Total number of approvers", "required": true }
+  },
+  "concepts": ["capability", "resource", "signer"],
+  "permissionEffects": [
+    { "action": "Submit approval", "actor": "Specific Role" },
+    { "action": "Execute multi-approval action", "actor": "Specific Role" }
+  ],
+  "auditHints": ["multisig-threshold-check"]
+}

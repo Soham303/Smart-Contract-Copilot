@@ -1,0 +1,24 @@
+{
+  "type": "logic.state_variable",
+  "category": "Logic",
+  "title": "State Variable",
+  "description": "Stores mutable on-chain state within a global resource struct.",
+  "ports": {
+    "in": [
+      { "name": "setter_guard", "type": "AccessGate", "description": "Guard controlling who can update this state" }
+    ],
+    "out": [
+      { "name": "val", "type": "DataRef", "description": "Reference to the stored value" }
+    ]
+  },
+  "props": {
+    "name": { "type": "string", "default": "treasury_balance", "description": "Variable name", "required": true },
+    "varType": { "type": "enum", "values": ["u64", "u128", "bool", "address", "String"], "default": "u64", "description": "Move type", "required": true },
+    "initialValue": { "type": "string", "default": "0", "description": "Initial state value" }
+  },
+  "concepts": ["resource", "acquires"],
+  "permissionEffects": [
+    { "action": "Update state variable", "actor": "Owner/Admin" }
+  ],
+  "auditHints": ["state-mutation"]
+}

@@ -1,0 +1,21 @@
+{
+  "type": "token.transfer_fee",
+  "category": "Token",
+  "title": "Transfer Fee",
+  "description": "Enforces a protocol fee on every token transfer, routed to a designated treasury address.",
+  "ports": {
+    "in": [],
+    "out": [
+      { "name": "fee_config", "type": "FeeConfig", "description": "Connect to Fungible Token fee port" }
+    ]
+  },
+  "props": {
+    "bps": { "type": "int", "default": 100, "min": 0, "max": 1000, "description": "Fee in basis points (100 bps = 1%, max 1000 = 10%)", "required": true },
+    "recipient": { "type": "string", "default": "creator", "description": "Address or role receiving the collected fees" }
+  },
+  "concepts": ["resource", "fungible-asset"],
+  "permissionEffects": [
+    { "action": "Collect transfer fee", "actor": "Nobody/Disabled" }
+  ],
+  "auditHints": ["bounded-fee", "sc006-check"]
+}

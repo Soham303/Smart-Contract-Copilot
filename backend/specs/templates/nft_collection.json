@@ -1,0 +1,66 @@
+{
+  "id": "template_nft_collection",
+  "name": "NFT Collection",
+  "category": "NFT",
+  "description": "Digital Asset NFT collection with 5% creator royalty, whitelist minting, and supply cap.",
+  "graph": {
+    "schemaVersion": "1.0",
+    "target": "aptos-move",
+    "meta": {
+      "name": "SkyApes",
+      "moduleName": "sky_apes"
+    },
+    "blocks": [
+      {
+        "id": "b1",
+        "type": "nft.collection",
+        "props": {
+          "name": "Sky Apes",
+          "description": "Exclusive digital collectibles on Aptos",
+          "maxSupply": 1000,
+          "uri": "https://ipfs.io/ipfs/QmSkyApesCollection"
+        }
+      },
+      {
+        "id": "b2",
+        "type": "nft.royalty",
+        "props": {
+          "bps": 500,
+          "recipient": "creator"
+        }
+      },
+      {
+        "id": "b3",
+        "type": "access.whitelist",
+        "props": {
+          "scope": "mint"
+        }
+      },
+      {
+        "id": "b4",
+        "type": "access.owner",
+        "props": {}
+      }
+    ],
+    "edges": [
+      {
+        "from": "b2",
+        "fromPort": "royalty",
+        "to": "b1",
+        "toPort": "royalty"
+      },
+      {
+        "from": "b3",
+        "fromPort": "gate",
+        "to": "b1",
+        "toPort": "mint"
+      },
+      {
+        "from": "b4",
+        "fromPort": "owner",
+        "to": "b3",
+        "toPort": "admin"
+      }
+    ]
+  }
+}

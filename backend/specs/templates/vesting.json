@@ -1,0 +1,32 @@
+{
+  "id": "template_vesting",
+  "name": "Token Vesting",
+  "category": "Finance",
+  "description": "Linear vesting contract releasing team/investor tokens following a 30-day cliff schedule.",
+  "graph": {
+    "schemaVersion": "1.0",
+    "target": "aptos-move",
+    "meta": {
+      "name": "TeamVesting",
+      "moduleName": "team_vesting"
+    },
+    "blocks": [
+      {
+        "id": "b1",
+        "type": "finance.vesting",
+        "props": {
+          "beneficiary": "0x3",
+          "cliffDurationSec": 2592000,
+          "vestingDurationSec": 31536000,
+          "totalAmount": 500000
+        }
+      },
+      {
+        "id": "b2",
+        "type": "access.owner",
+        "props": {}
+      }
+    ],
+    "edges": []
+  }
+}

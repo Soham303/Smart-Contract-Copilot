@@ -1,0 +1,45 @@
+{
+  "id": "template_voting_dao",
+  "name": "Voting / DAO",
+  "category": "Governance",
+  "description": "Decentralized autonomous organization governance with proposal creation, 20% quorum, and majority vote.",
+  "graph": {
+    "schemaVersion": "1.0",
+    "target": "aptos-move",
+    "meta": {
+      "name": "DaoGovernance",
+      "moduleName": "dao_governance"
+    },
+    "blocks": [
+      {
+        "id": "b1",
+        "type": "governance.voting_proposal",
+        "props": {
+          "quorumPct": 20,
+          "votingPeriodSec": 259200,
+          "passThresholdPct": 51
+        }
+      },
+      {
+        "id": "b2",
+        "type": "access.role",
+        "props": {
+          "roleName": "COUNCIL"
+        }
+      },
+      {
+        "id": "b3",
+        "type": "access.owner",
+        "props": {}
+      }
+    ],
+    "edges": [
+      {
+        "from": "b3",
+        "fromPort": "owner",
+        "to": "b2",
+        "toPort": "manager"
+      }
+    ]
+  }
+}

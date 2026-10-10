@@ -1,0 +1,23 @@
+{
+  "type": "finance.crowdfunding",
+  "category": "Finance",
+  "title": "Crowdfunding",
+  "description": "Raises funds toward a target goal before a deadline; enables automatic contributor refunds if goal is not met.",
+  "ports": {
+    "in": [],
+    "out": [
+      { "name": "campaign_out", "type": "FinanceRef", "description": "Campaign reference" }
+    ]
+  },
+  "props": {
+    "targetGoalApt": { "type": "int", "default": 500, "min": 1, "description": "Funding goal in APT", "required": true },
+    "durationDays": { "type": "int", "default": 30, "min": 1, "max": 90, "description": "Campaign duration in days" }
+  },
+  "concepts": ["resource", "signer", "acquires"],
+  "permissionEffects": [
+    { "action": "Contribute to campaign", "actor": "Anyone" },
+    { "action": "Withdraw campaign funds", "actor": "Owner/Admin" },
+    { "action": "Claim contributor refund", "actor": "Anyone" }
+  ],
+  "auditHints": ["goal-deadline-validation"]
+}

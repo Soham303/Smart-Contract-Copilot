@@ -1,0 +1,21 @@
+{
+  "type": "nft.royalty",
+  "category": "NFT",
+  "title": "Royalty",
+  "description": "Configures standard secondary market royalties for all minted collection tokens.",
+  "ports": {
+    "in": [],
+    "out": [
+      { "name": "royalty", "type": "RoyaltyConfig", "description": "Connect to NFT Collection royalty port" }
+    ]
+  },
+  "props": {
+    "bps": { "type": "int", "default": 500, "min": 0, "max": 1000, "description": "Royalty in basis points (500 bps = 5%)", "required": true },
+    "recipient": { "type": "enum", "values": ["creator", "custom_address"], "default": "creator", "description": "Royalty recipient" }
+  },
+  "concepts": ["object", "resource"],
+  "permissionEffects": [
+    { "action": "Change royalty", "actor": "Nobody/Disabled" }
+  ],
+  "auditHints": ["bounded-fee", "sc006-check"]
+}

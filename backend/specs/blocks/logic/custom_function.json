@@ -1,0 +1,24 @@
+{
+  "type": "logic.custom_function",
+  "category": "Logic",
+  "title": "Custom Function",
+  "description": "Custom Move function allowing developer logic with typed parameters and return values.",
+  "ports": {
+    "in": [
+      { "name": "caller", "type": "AccessGate", "description": "Optional caller access control" }
+    ],
+    "out": [
+      { "name": "result", "type": "LogicGate", "description": "Function execution output" }
+    ]
+  },
+  "props": {
+    "name": { "type": "string", "default": "custom_action", "description": "Function name", "required": true },
+    "isEntry": { "type": "boolean", "default": true, "description": "Is callable directly by users (entry function)?" },
+    "description": { "type": "string", "default": "Custom contract function logic", "description": "Description" }
+  },
+  "concepts": ["entry-function", "signer"],
+  "permissionEffects": [
+    { "action": "Custom function execution", "actor": "Anyone" }
+  ],
+  "auditHints": ["custom-logic-check"]
+}

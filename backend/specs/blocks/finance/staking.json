@@ -1,0 +1,23 @@
+{
+  "type": "finance.staking",
+  "category": "Finance",
+  "title": "Staking",
+  "description": "Stake tokens to earn periodic rewards with configurable lockup periods.",
+  "ports": {
+    "in": [],
+    "out": [
+      { "name": "staking_pool", "type": "FinanceRef", "description": "Staking pool reference" }
+    ]
+  },
+  "props": {
+    "rewardRatePerSec": { "type": "int", "default": 10, "min": 1, "description": "Reward tokens distributed per second" },
+    "lockupDurationSec": { "type": "int", "default": 604800, "min": 0, "description": "Minimum lockup in seconds (e.g. 7 days)" }
+  },
+  "concepts": ["resource", "signer", "acquires"],
+  "permissionEffects": [
+    { "action": "Stake tokens", "actor": "Anyone" },
+    { "action": "Claim staking rewards", "actor": "Anyone" },
+    { "action": "Unstake tokens", "actor": "Anyone" }
+  ],
+  "auditHints": ["reward-calculation", "lockup-check"]
+}

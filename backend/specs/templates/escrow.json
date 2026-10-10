@@ -1,0 +1,38 @@
+{
+  "id": "template_escrow",
+  "name": "Escrow",
+  "category": "Finance",
+  "description": "Secure fund release between buyer and seller, with arbiter dispute access and refund timeout.",
+  "graph": {
+    "schemaVersion": "1.0",
+    "target": "aptos-move",
+    "meta": {
+      "name": "TradeEscrow",
+      "moduleName": "trade_escrow"
+    },
+    "blocks": [
+      {
+        "id": "b1",
+        "type": "finance.escrow",
+        "props": {
+          "beneficiary": "0x2",
+          "timeoutSec": 86400,
+          "autoRefundOnTimeout": true
+        }
+      },
+      {
+        "id": "b2",
+        "type": "access.owner",
+        "props": {}
+      }
+    ],
+    "edges": [
+      {
+        "from": "b2",
+        "fromPort": "owner",
+        "to": "b1",
+        "toPort": "arbiter"
+      }
+    ]
+  }
+}

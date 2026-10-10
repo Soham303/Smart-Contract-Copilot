@@ -1,0 +1,25 @@
+{
+  "type": "nft.mint_rules",
+  "category": "NFT",
+  "title": "Mint Rules",
+  "description": "Sets public or whitelisted minting price, per-wallet mint limits, and active time windows.",
+  "ports": {
+    "in": [
+      { "name": "gate", "type": "AccessGate", "description": "Connect Whitelist or Role block to gate minting" }
+    ],
+    "out": [
+      { "name": "mint_rules", "type": "MintRulesConfig", "description": "Connect to NFT Collection mint_rules port" }
+    ]
+  },
+  "props": {
+    "priceApt": { "type": "int", "default": 1, "min": 0, "description": "Mint price in APT units" },
+    "perWalletLimit": { "type": "int", "default": 5, "min": 1, "description": "Maximum mints per address" },
+    "startTime": { "type": "int", "default": 0, "min": 0, "description": "Unix timestamp start time (0 for immediately)" },
+    "endTime": { "type": "int", "default": 0, "min": 0, "description": "Unix timestamp end time (0 for no end)" }
+  },
+  "concepts": ["signer", "entry-function"],
+  "permissionEffects": [
+    { "action": "Mint with rules", "actor": "Anyone" }
+  ],
+  "auditHints": ["time-bound-check", "sc011-check"]
+}
