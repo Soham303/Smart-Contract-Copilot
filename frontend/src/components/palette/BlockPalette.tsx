@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { BlockSpec } from '../../types/blocks';
+import { Search, Plus, GripVertical } from 'lucide-react';
 
 interface BlockPaletteProps {
   categories: string[];
@@ -17,7 +18,6 @@ export const BlockPalette: React.FC<BlockPaletteProps> = ({
   const [search, setSearch] = useState('');
   const [activeCategory, setActiveCategory] = useState<string>('All');
 
-  // Friendly plain-English descriptors
   const blockIcons: Record<string, string> = {
     'token.fungible': '🪙',
     'token.mint_control': '🖨️',
@@ -47,30 +47,30 @@ export const BlockPalette: React.FC<BlockPaletteProps> = ({
   };
 
   const friendlyTitles: Record<string, string> = {
-    'token.fungible': 'Regular Coin / Token',
-    'token.mint_control': 'Mint Permission',
-    'token.burn': 'Burn (Destroy Coins)',
-    'token.freeze_pause': 'Emergency Freeze',
+    'token.fungible': 'Fungible Token (FA)',
+    'token.mint_control': 'Mint Control Gate',
+    'token.burn': 'Burn Control',
+    'token.freeze_pause': 'Emergency Pause',
     'token.transfer_fee': 'Transfer Fee (Tax)',
     'access.owner': 'Master Admin (Owner)',
     'access.role': 'Team Role Member',
     'access.whitelist': 'VIP Whitelist',
-    'access.pausable': 'Pause Switch',
+    'access.pausable': 'Emergency Pausable',
     'nft.collection': 'NFT Collection',
-    'nft.royalty': 'Creator Royalty Fee',
+    'nft.royalty': 'Resale Royalty',
     'nft.mint_rules': 'NFT Mint Schedule',
     'nft.reveal_metadata': 'Mystery Box Reveal',
-    'finance.escrow': 'Safe Escrow Protection',
-    'finance.vesting': 'Vesting Lockup',
-    'finance.staking': 'Staking Reward Pool',
+    'finance.escrow': 'Trustless Escrow',
+    'finance.vesting': 'Linear Vesting Lock',
+    'finance.staking': 'Staking Rewards',
     'finance.payment_splitter': 'Payment Splitter',
     'finance.crowdfunding': 'Crowdfunding Campaign',
-    'governance.voting_proposal': 'Community Voting (DAO)',
-    'governance.multi_approval': 'Multi-Signature Approval',
+    'governance.voting_proposal': 'Lightweight DAO',
+    'governance.multi_approval': 'Multi-Sig Approval',
     'logic.condition': 'Required Rule (Assert)',
     'logic.custom_function': 'Custom Action Function',
     'logic.state_variable': 'Saved Data Variable',
-    'logic.event_emit': 'Live Event Broadcaster',
+    'logic.event_emit': 'Event Broadcaster',
     'logic.time_lock': 'Delayed Time Lock',
   };
 
@@ -79,45 +79,53 @@ export const BlockPalette: React.FC<BlockPaletteProps> = ({
     : categories.filter(c => c.toLowerCase() === activeCategory.toLowerCase());
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', gap: '0.75rem' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', gap: '0.65rem' }}>
       <div>
-        <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#60a5fa', textTransform: 'uppercase', marginBottom: '4px' }}>
-          Step 1: Pick Blocks
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+          <span style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--primary)', fontFamily: 'var(--font-mono)' }}>
+            PRIMITIVES PALETTE
+          </span>
+          <span style={{ fontSize: '0.6875rem', color: 'var(--text-muted)' }}>Drag or +Add</span>
         </div>
-        <p style={{ fontSize: '0.75rem', color: '#9ca3af', marginBottom: '8px' }}>
-          Drag a block onto the canvas or click <strong>+ Add</strong>.
-        </p>
-        <input
-          type="text"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search by name (e.g. coin, royalty, admin)..."
-          id="palette-search-input"
-          style={{
-            width: '100%',
-            padding: '8px 10px',
-            background: '#090d16',
-            border: '1px solid #374151',
-            borderRadius: '6px',
-            color: '#fff',
-            fontSize: '0.8rem',
-            outline: 'none',
-          }}
-        />
+        
+        {/* Search Input */}
+        <div style={{ position: 'relative' }}>
+          <Search size={14} color="var(--text-muted)" style={{ position: 'absolute', left: '10px', top: '10px' }} />
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search primitives (coin, gate, escrow)..."
+            id="palette-search-input"
+            style={{
+              width: '100%',
+              padding: '8px 10px 8px 30px',
+              background: '#ffffff',
+              border: '1px solid var(--border-subtle)',
+              borderRadius: '6px',
+              color: 'var(--text-primary)',
+              fontSize: '0.78rem',
+              outline: 'none',
+              boxShadow: 'var(--shadow-sm)',
+            }}
+          />
+        </div>
       </div>
 
-      {/* Category Pills */}
-      <div style={{ display: 'flex', gap: '4px', overflowX: 'auto', paddingBottom: '2px' }}>
+      {/* Category Filter Pills */}
+      <div style={{ display: 'flex', gap: '4px', overflowX: 'auto', paddingBottom: '4px' }}>
         <button
           onClick={() => setActiveCategory('All')}
           style={{
             padding: '4px 8px',
-            borderRadius: '12px',
-            border: 'none',
-            fontSize: '0.72rem',
+            borderRadius: '9999px',
+            border: activeCategory === 'All' ? '1px solid var(--primary)' : '1px solid var(--border-subtle)',
+            fontSize: '0.6875rem',
             fontWeight: 600,
-            background: activeCategory === 'All' ? '#3b82f6' : '#1f2937',
-            color: '#fff',
+            background: activeCategory === 'All' ? 'var(--primary)' : 'var(--surface-container-low)',
+            color: activeCategory === 'All' ? '#ffffff' : 'var(--text-secondary)',
+            cursor: 'pointer',
+            whiteSpace: 'nowrap',
           }}
         >
           All
@@ -128,12 +136,14 @@ export const BlockPalette: React.FC<BlockPaletteProps> = ({
             onClick={() => setActiveCategory(cat)}
             style={{
               padding: '4px 8px',
-              borderRadius: '12px',
-              border: 'none',
-              fontSize: '0.72rem',
+              borderRadius: '9999px',
+              border: activeCategory === cat ? '1px solid var(--primary)' : '1px solid var(--border-subtle)',
+              fontSize: '0.6875rem',
               fontWeight: 600,
-              background: activeCategory === cat ? '#3b82f6' : '#1f2937',
-              color: '#fff',
+              background: activeCategory === cat ? 'var(--primary)' : 'var(--surface-container-low)',
+              color: activeCategory === cat ? '#ffffff' : 'var(--text-secondary)',
+              cursor: 'pointer',
+              whiteSpace: 'nowrap',
             }}
           >
             {cat}
@@ -141,29 +151,35 @@ export const BlockPalette: React.FC<BlockPaletteProps> = ({
         ))}
       </div>
 
-      {/* Categorized List */}
-      <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-        {filteredCategories.map((category) => {
-          const blocks = (groupedBlocks[category] || []).filter(b => {
+      {/* Grouped Block Accordion Cards */}
+      <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.75rem', paddingRight: '2px' }}>
+        {filteredCategories.map((cat) => {
+          const blocks = (groupedBlocks[cat] || []).filter(b => {
             const title = friendlyTitles[b.type] || b.title;
-            return title.toLowerCase().includes(search.toLowerCase()) ||
-              b.type.toLowerCase().includes(search.toLowerCase());
+            return title.toLowerCase().includes(search.toLowerCase()) || b.type.toLowerCase().includes(search.toLowerCase());
           });
 
           if (blocks.length === 0) return null;
 
           return (
-            <div key={category}>
-              <div style={{
-                fontSize: '0.7rem',
-                textTransform: 'uppercase',
-                letterSpacing: '0.05em',
-                color: '#94a3b8',
-                marginBottom: '4px',
-                fontWeight: 700,
-              }}>
-                {category}
+            <div key={cat}>
+              <div
+                style={{
+                  fontSize: '0.6875rem',
+                  fontWeight: 700,
+                  color: 'var(--text-muted)',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.04em',
+                  marginBottom: '6px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                }}
+              >
+                <span>{cat}</span>
+                <span style={{ fontSize: '0.625rem', color: 'var(--text-disabled)' }}>({blocks.length})</span>
               </div>
+
               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                 {blocks.map((block) => {
                   const icon = blockIcons[block.type] || '📦';
@@ -174,51 +190,64 @@ export const BlockPalette: React.FC<BlockPaletteProps> = ({
                       key={block.type}
                       draggable
                       onDragStart={(e) => {
-                        e.dataTransfer.setData('application/reactflow', JSON.stringify(block));
+                        e.dataTransfer.setData('application/reactflow', block.type);
                         e.dataTransfer.effectAllowed = 'move';
                       }}
                       style={{
-                        padding: '10px',
-                        background: '#161e2e',
-                        border: '1px solid #2d3748',
+                        background: '#ffffff',
+                        border: '1px solid var(--border-subtle)',
                         borderRadius: '8px',
+                        padding: '8px 10px',
                         cursor: 'grab',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'space-between',
-                        gap: '6px',
-                        transition: 'border-color 0.15s ease',
+                        boxShadow: 'var(--shadow-sm)',
+                        transition: 'all 0.15s ease',
                       }}
                     >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <span style={{ fontSize: '1.25rem' }}>{icon}</span>
-                        <div>
-                          <span style={{ fontWeight: 700, fontSize: '0.82rem', color: '#fff', display: 'block' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflow: 'hidden' }}>
+                        <span style={{ color: 'var(--text-disabled)', fontSize: '0.8rem' }}>
+                          <GripVertical size={14} />
+                        </span>
+                        <span style={{ fontSize: '1.05rem', lineHeight: 1 }}>{icon}</span>
+                        <div style={{ overflow: 'hidden' }}>
+                          <div
+                            style={{
+                              fontSize: '0.78rem',
+                              fontWeight: 600,
+                              color: 'var(--text-primary)',
+                              whiteSpace: 'nowrap',
+                              textOverflow: 'ellipsis',
+                              overflow: 'hidden',
+                            }}
+                          >
                             {title}
-                          </span>
-                          <span style={{ fontSize: '0.68rem', color: '#94a3b8' }}>
-                            {block.description?.slice(0, 42)}...
-                          </span>
+                          </div>
+                          <div style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
+                            {block.type}
+                          </div>
                         </div>
                       </div>
 
-                      {onSelectBlock && (
-                        <button
-                          onClick={() => onSelectBlock(block)}
-                          style={{
-                            padding: '3px 8px',
-                            background: 'rgba(59, 130, 246, 0.15)',
-                            border: '1px solid rgba(59, 130, 246, 0.35)',
-                            color: '#60a5fa',
-                            borderRadius: '4px',
-                            fontSize: '0.7rem',
-                            fontWeight: 700,
-                            whiteSpace: 'nowrap',
-                          }}
-                        >
-                          + Add
-                        </button>
-                      )}
+                      <button
+                        onClick={() => onSelectBlock && onSelectBlock(block)}
+                        title="Add Block to Canvas"
+                        style={{
+                          width: '24px',
+                          height: '24px',
+                          borderRadius: '6px',
+                          border: '1px solid var(--border-subtle)',
+                          background: 'var(--surface-container-low)',
+                          color: 'var(--primary)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        <Plus size={14} />
+                      </button>
                     </div>
                   );
                 })}
