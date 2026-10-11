@@ -15,6 +15,7 @@ __pycache__/
 out/
 build/
 dist/
+*.tsbuildinfo
 
 # Python virtual environment
 venv/
