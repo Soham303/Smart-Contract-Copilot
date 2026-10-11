@@ -4,88 +4,131 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '../auth/AuthContext';
+import { Bell, ShieldCheck, Zap, ChevronDown } from 'lucide-react';
 
 export const Header: React.FC = () => {
   const pathname = usePathname();
   const { user, isLoggedIn, logout, openAuthModal } = useAuth();
-  const [walletConnected, setWalletConnected] = useState<string | null>(null);
-
-  const handleConnectWallet = () => {
-    if (walletConnected) {
-      setWalletConnected(null);
-    } else {
-      setWalletConnected('0x9a83...cdef');
-    }
-  };
+  const [walletConnected, setWalletConnected] = useState<string>('0x7a3...e91b');
+  const [showUserDropdown, setShowUserDropdown] = useState(false);
 
   const navLinks = [
-    { label: '🎨 Canvas Builder', href: '/workspace/demo' },
-    { label: '⚡ Gas Optimizer (USP)', href: '/gas-optimizer' },
-    { label: '📁 Templates & Dashboard', href: '/dashboard' },
+    { label: 'Overview', href: '/' },
+    { label: 'Visual Builder', href: '/workspace/demo' },
+    { label: 'Security & Audit', href: '/audit' },
+    { label: 'Templates', href: '/templates' },
+    { label: 'Gas Optimization [Demo]', href: '/gas-optimizer' },
+    { label: 'Market Radar', href: '/news' },
+    { label: 'Account Hub', href: '/account' },
   ];
+
+  const handleWalletToggle = () => {
+    if (walletConnected) {
+      setWalletConnected('');
+    } else {
+      setWalletConnected('0x7a3...e91b');
+    }
+  };
 
   return (
     <header
       style={{
-        height: '60px',
-        borderBottom: '1px solid #1e293b',
-        background: '#090d16',
+        height: '64px',
+        borderBottom: '1px solid var(--border-subtle)',
+        background: 'var(--surface-container-lowest)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
         padding: '0 1.5rem',
         position: 'sticky',
         top: 0,
-        zIndex: 50,
+        zIndex: 100,
+        boxShadow: 'var(--shadow-sm)',
       }}
     >
-      {/* Brand Logo & Name */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '1.75rem' }}>
+      {/* Left: Brand Identity + Contextual Module Indicator */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
         <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <span style={{ fontSize: '1.4rem' }}>⚡</span>
+          <div
+            style={{
+              width: '32px',
+              height: '32px',
+              borderRadius: '8px',
+              background: 'linear-gradient(135deg, #0f766e 0%, #042f2e 100%)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: '#ffffff',
+              boxShadow: '0 2px 4px rgba(15, 118, 110, 0.2)',
+            }}
+          >
+            <Zap size={18} fill="#ffffff" />
+          </div>
           <span
             style={{
               fontWeight: 800,
-              fontSize: '1.15rem',
+              fontSize: '1.05rem',
               letterSpacing: '-0.02em',
-              background: 'linear-gradient(to right, #ffffff, #93c5fd)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
+              color: 'var(--text-primary)',
             }}
           >
             Smart Contract Copilot
           </span>
         </Link>
 
-        {/* Navigation Links */}
-        <nav style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-          {navLinks.map((link) => {
-            const isActive = pathname.startsWith(link.href);
-            return (
-              <Link
-                key={link.href}
-                href={link.href}
-                style={{
-                  padding: '6px 12px',
-                  borderRadius: '6px',
-                  fontSize: '0.82rem',
-                  fontWeight: isActive ? 700 : 500,
-                  color: isActive ? '#60a5fa' : '#94a3b8',
-                  background: isActive ? 'rgba(59, 130, 246, 0.1)' : 'transparent',
-                  border: isActive ? '1px solid rgba(59, 130, 246, 0.25)' : '1px solid transparent',
-                  transition: 'all 0.15s ease',
-                }}
-              >
-                {link.label}
-              </Link>
-            );
-          })}
-        </nav>
+        {/* Contextual Module Indicator */}
+        <div
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '4px',
+            padding: '3px 8px',
+            borderRadius: '9999px',
+            background: 'var(--surface-container-low)',
+            border: '1px solid var(--surface-dim)',
+            fontSize: '0.6875rem',
+            fontFamily: 'var(--font-mono)',
+            fontWeight: 600,
+            color: 'var(--primary)',
+            letterSpacing: '0.02em',
+          }}
+        >
+          <span>Move / Aptos</span>
+        </div>
       </div>
 
-      {/* Right Controls */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-        {/* Network Pill */}
+      {/* Center: Primary Route Navigation Links */}
+      <nav style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+        {navLinks.map((link) => {
+          const isActive = link.href === '/' ? pathname === '/' : pathname.startsWith(link.href);
+          const isDemo = link.label.includes('[Demo]');
+          return (
+            <Link
+              key={link.href}
+              href={link.href}
+              style={{
+                padding: '6px 11px',
+                borderRadius: '6px',
+                fontSize: '0.8125rem',
+                fontWeight: isActive ? 600 : 500,
+                color: isActive ? 'var(--primary)' : isDemo ? 'var(--risk-medium)' : 'var(--text-secondary)',
+                background: isActive ? 'var(--primary-container)' : 'transparent',
+                border: isActive ? '1px solid rgba(15, 118, 110, 0.15)' : '1px solid transparent',
+                transition: 'all 0.15s ease',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '4px',
+              }}
+            >
+              {link.label}
+            </Link>
+          );
+        })}
+      </nav>
+
+      {/* Right: Network Status + Connected Petra Wallet + Avatar */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+        {/* Network Status Pill */}
         <div
           style={{
             display: 'flex',
@@ -93,76 +136,167 @@ export const Header: React.FC = () => {
             gap: '6px',
             padding: '4px 10px',
             borderRadius: '9999px',
-            background: 'rgba(16, 185, 129, 0.1)',
-            border: '1px solid rgba(16, 185, 129, 0.25)',
-            fontSize: '0.75rem',
-            color: '#34d399',
+            background: 'var(--tertiary-container)',
+            border: '1px solid var(--tertiary-border)',
+            fontSize: '0.72rem',
+            color: 'var(--tertiary)',
             fontWeight: 600,
+            fontFamily: 'var(--font-mono)',
           }}
         >
-          <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#10b981' }} />
+          <span className="pulse-dot" />
           Aptos Testnet
         </div>
 
-        {/* User Auth Section */}
-        {isLoggedIn && user ? (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <div style={{ textAlign: 'right', lineHeight: 1.2 }}>
-              <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#fff' }}>{user.name}</div>
-              <div style={{ fontSize: '0.7rem', color: '#60a5fa' }}>{user.plan} tier</div>
-            </div>
-            <button
-              onClick={logout}
-              style={{
-                padding: '5px 10px',
-                borderRadius: '6px',
-                background: 'rgba(239, 68, 68, 0.1)',
-                border: '1px solid rgba(239, 68, 68, 0.3)',
-                color: '#f87171',
-                fontSize: '0.75rem',
-                fontWeight: 600,
-                cursor: 'pointer',
-              }}
-            >
-              Logout
-            </button>
-          </div>
-        ) : (
+        {/* Connected Petra Wallet Pill */}
+        <button
+          onClick={handleWalletToggle}
+          id="petra-wallet-btn"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            padding: '5px 12px',
+            borderRadius: '9999px',
+            background: walletConnected ? 'var(--surface-container-low)' : 'var(--primary)',
+            border: `1px solid ${walletConnected ? 'var(--border-subtle)' : 'var(--primary)'}`,
+            color: walletConnected ? 'var(--text-primary)' : '#ffffff',
+            fontSize: '0.75rem',
+            fontFamily: 'var(--font-mono)',
+            fontWeight: 600,
+            transition: 'all 0.15s ease',
+          }}
+          title={walletConnected ? 'Click to toggle wallet state' : 'Connect Petra Wallet'}
+        >
+          <ShieldCheck size={14} color={walletConnected ? 'var(--security-emerald)' : '#ffffff'} />
+          {walletConnected ? `Petra (${walletConnected})` : 'Connect Petra'}
+        </button>
+
+        {/* Notification Bell */}
+        <button
+          style={{
+            width: '32px',
+            height: '32px',
+            borderRadius: '8px',
+            background: 'transparent',
+            border: '1px solid var(--border-subtle)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: 'var(--text-secondary)',
+            transition: 'background 0.15s ease',
+          }}
+          title="Notifications (Formal Prover Active)"
+        >
+          <Bell size={15} />
+        </button>
+
+        {/* User Profile Avatar: Nina Vance */}
+        <div style={{ position: 'relative' }}>
           <button
-            onClick={openAuthModal}
-            id="signin-btn"
+            onClick={() => setShowUserDropdown(!showUserDropdown)}
             style={{
-              padding: '6px 14px',
-              borderRadius: '6px',
-              background: '#1e293b',
-              border: '1px solid #334155',
-              color: '#fff',
-              fontSize: '0.82rem',
-              fontWeight: 600,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '2px 4px 2px 2px',
+              borderRadius: '9999px',
+              background: 'transparent',
+              border: 'none',
               cursor: 'pointer',
             }}
           >
-            Sign In / Register
+            <div
+              style={{
+                width: '30px',
+                height: '30px',
+                borderRadius: '50%',
+                background: 'linear-gradient(135deg, #0f766e 0%, #3b82f6 100%)',
+                color: '#ffffff',
+                fontWeight: 700,
+                fontSize: '0.75rem',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+              }}
+            >
+              NV
+            </div>
+            <div style={{ textAlign: 'left', lineHeight: 1.1, display: 'none' }}>
+              <div style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-primary)' }}>Nina Vance</div>
+            </div>
+            <ChevronDown size={12} color="var(--text-muted)" />
           </button>
-        )}
 
-        {/* Wallet Connection Button */}
-        <button
-          onClick={handleConnectWallet}
-          id="petra-wallet-btn"
-          style={{
-            padding: '6px 14px',
-            borderRadius: '6px',
-            background: walletConnected ? 'rgba(16, 185, 129, 0.15)' : 'rgba(59, 130, 246, 0.15)',
-            border: `1px solid ${walletConnected ? '#10b981' : '#3b82f6'}`,
-            color: walletConnected ? '#34d399' : '#60a5fa',
-            fontSize: '0.82rem',
-            fontWeight: 700,
-            cursor: 'pointer',
-          }}
-        >
-          {walletConnected ? `Petra (${walletConnected})` : 'Connect Petra'}
-        </button>
+          {showUserDropdown && (
+            <div
+              style={{
+                position: 'absolute',
+                top: '40px',
+                right: 0,
+                width: '210px',
+                background: 'var(--surface-container-lowest)',
+                borderRadius: '8px',
+                border: '1px solid var(--border-subtle)',
+                boxShadow: 'var(--shadow-md)',
+                padding: '8px',
+                zIndex: 200,
+              }}
+            >
+              <div style={{ padding: '6px 8px', borderBottom: '1px solid var(--border-subtle)', marginBottom: '4px' }}>
+                <div style={{ fontSize: '0.8125rem', fontWeight: 700, color: 'var(--text-primary)' }}>Nina Vance</div>
+                <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>nina@move.studio • Developer Pro</div>
+              </div>
+              <Link
+                href="/account"
+                onClick={() => setShowUserDropdown(false)}
+                style={{
+                  display: 'block',
+                  padding: '6px 8px',
+                  borderRadius: '6px',
+                  fontSize: '0.78rem',
+                  color: 'var(--text-secondary)',
+                }}
+              >
+                Account & Deploy Hub
+              </Link>
+              <Link
+                href="/audit"
+                onClick={() => setShowUserDropdown(false)}
+                style={{
+                  display: 'block',
+                  padding: '6px 8px',
+                  borderRadius: '6px',
+                  fontSize: '0.78rem',
+                  color: 'var(--text-secondary)',
+                }}
+              >
+                Security & Audit Suite
+              </Link>
+              <button
+                onClick={() => {
+                  setShowUserDropdown(false);
+                  if (isLoggedIn) logout();
+                  else openAuthModal();
+                }}
+                style={{
+                  width: '100%',
+                  textAlign: 'left',
+                  padding: '6px 8px',
+                  borderRadius: '6px',
+                  border: 'none',
+                  background: 'transparent',
+                  fontSize: '0.78rem',
+                  color: isLoggedIn ? 'var(--risk-critical)' : 'var(--primary)',
+                  fontWeight: 600,
+                }}
+              >
+                {isLoggedIn ? 'Sign Out' : 'Sign In / Register'}
+              </button>
+            </div>
+          )}
+        </div>
       </div>
     </header>
   );
