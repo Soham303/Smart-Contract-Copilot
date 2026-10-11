@@ -1,8 +1,8 @@
 {
   "id": "template_nft_collection",
-  "name": "NFT Collection",
+  "name": "Digital Asset NFT Collection",
   "category": "NFT",
-  "description": "Digital Asset NFT collection with 5% creator royalty, whitelist minting, and supply cap.",
+  "description": "Aptos Digital Asset v2 collection with 5% creator resale royalty, VIP whitelist gate, and supply cap.",
   "graph": {
     "schemaVersion": "1.0",
     "target": "aptos-move",
@@ -13,53 +13,59 @@
     "blocks": [
       {
         "id": "b1",
-        "type": "nft.collection",
+        "type": "access.owner",
+        "position": { "x": 60, "y": 180 },
         "props": {
-          "name": "Sky Apes",
-          "description": "Exclusive digital collectibles on Aptos",
-          "maxSupply": 1000,
-          "uri": "https://ipfs.io/ipfs/QmSkyApesCollection"
+          "transferable": true
         }
       },
       {
         "id": "b2",
+        "type": "access.whitelist",
+        "position": { "x": 440, "y": 80 },
+        "props": {
+          "scope": "mint"
+        }
+      },
+      {
+        "id": "b3",
         "type": "nft.royalty",
+        "position": { "x": 440, "y": 300 },
         "props": {
           "bps": 500,
           "recipient": "creator"
         }
       },
       {
-        "id": "b3",
-        "type": "access.whitelist",
-        "props": {
-          "scope": "mint"
-        }
-      },
-      {
         "id": "b4",
-        "type": "access.owner",
-        "props": {}
+        "type": "nft.collection",
+        "position": { "x": 820, "y": 180 },
+        "props": {
+          "name": "Sky Apes",
+          "description": "Exclusive digital collectibles on Aptos",
+          "maxSupply": 1000,
+          "uri": "https://ipfs.io/ipfs/QmSkyApesCollection"
+        }
       }
     ],
     "edges": [
       {
-        "from": "b2",
-        "fromPort": "royalty",
-        "to": "b1",
-        "toPort": "royalty"
+        "from": "b1",
+        "fromPort": "owner",
+        "to": "b2",
+        "toPort": "admin"
       },
       {
-        "from": "b3",
+        "from": "b2",
         "fromPort": "gate",
-        "to": "b1",
+        "to": "b4",
         "toPort": "mint"
       },
       {
-        "from": "b4",
-        "fromPort": "owner",
-        "to": "b3",
-        "toPort": "admin"
+        "from": "b3",
+        "fromPort": "royalty",
+        "to": "b4",
+        "toPort": "royalty"
       }
     ]
   }

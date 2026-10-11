@@ -3,7 +3,7 @@
 import React from 'react';
 import { Handle, Position } from '@xyflow/react';
 import { BlockSpec } from '../../types/blocks';
-import { CheckCircle2, AlertTriangle, AlertCircle } from 'lucide-react';
+import { CheckCircle2, AlertTriangle } from 'lucide-react';
 
 interface BlockNodeProps {
   id: string;
@@ -20,7 +20,6 @@ interface BlockNodeProps {
 export const BlockNode: React.FC<BlockNodeProps> = ({ id, data }) => {
   const { spec, props, status = 'valid', statusMessage, learningMode = true, isSelected = false } = data;
 
-  // Plain-English beginner friendly title overrides and icons
   const friendlyTitles: Record<string, { icon: string; title: string; subtitle: string; structName: string; category: string; stripeColor: string }> = {
     'token.fungible': {
       icon: '🪙',
@@ -28,7 +27,7 @@ export const BlockNode: React.FC<BlockNodeProps> = ({ id, data }) => {
       subtitle: 'Primary Fungible Store',
       structName: 'struct ManagedFungibleAsset has key',
       category: 'Token Primitives',
-      stripeColor: '#0f766e', // Deep Teal
+      stripeColor: '#0f766e',
     },
     'token.mint_control': {
       icon: '🖨️',
@@ -36,7 +35,7 @@ export const BlockNode: React.FC<BlockNodeProps> = ({ id, data }) => {
       subtitle: 'Capped Supply & Mint Authority',
       structName: 'struct MintCapability has key, store',
       category: 'Access & Security',
-      stripeColor: '#ea580c', // Vivid Amber-Orange
+      stripeColor: '#ea580c',
     },
     'token.burn': {
       icon: '🔥',
@@ -64,8 +63,8 @@ export const BlockNode: React.FC<BlockNodeProps> = ({ id, data }) => {
     },
     'access.owner': {
       icon: '👑',
-      title: 'Master Admin Capability',
-      subtitle: 'Exclusive Authority Pattern',
+      title: 'Master Admin Authority',
+      subtitle: 'Exclusive Capability Pattern',
       structName: 'struct AdminCapability has key, store',
       category: 'Access & Security',
       stripeColor: '#ea580c',
@@ -86,13 +85,21 @@ export const BlockNode: React.FC<BlockNodeProps> = ({ id, data }) => {
       category: 'Access & Security',
       stripeColor: '#ea580c',
     },
+    'access.role': {
+      icon: '🛡️',
+      title: 'Role Member Gate',
+      subtitle: 'Role-Based Access Control',
+      structName: 'struct RoleCapability has key',
+      category: 'Access & Security',
+      stripeColor: '#ea580c',
+    },
     'nft.collection': {
       icon: '🖼️',
       title: 'NFT Collection',
       subtitle: 'Digital Asset Standard v2',
       structName: 'struct CollectionData has key',
       category: 'Digital Assets',
-      stripeColor: '#7c3aed', // Purple
+      stripeColor: '#7c3aed',
     },
     'nft.royalty': {
       icon: '💰',
@@ -108,7 +115,7 @@ export const BlockNode: React.FC<BlockNodeProps> = ({ id, data }) => {
       subtitle: 'Conditional Multi-party Lock',
       structName: 'struct EscrowLock has key',
       category: 'Finance & Escrow',
-      stripeColor: '#059669', // Security Emerald
+      stripeColor: '#059669',
     },
     'finance.vesting': {
       icon: '⏳',
@@ -132,7 +139,7 @@ export const BlockNode: React.FC<BlockNodeProps> = ({ id, data }) => {
       subtitle: 'Quorum & Voting Gate',
       structName: 'struct ProposalVote has key',
       category: 'Governance & Logic',
-      stripeColor: '#d97706', // Warm Gold
+      stripeColor: '#d97706',
     },
   };
 
@@ -145,26 +152,30 @@ export const BlockNode: React.FC<BlockNodeProps> = ({ id, data }) => {
     stripeColor: '#0f766e',
   };
 
-  // Semantic Handle Colors: Mint green for resources, cyan for capabilities, violet for event handles
   const getPortDotColor = (portType: string) => {
     switch (portType) {
       case 'MintGate':
       case 'MintRulesConfig':
       case 'TokenRef':
       case 'FinanceRef':
-        return '#10b981'; // Mint Green (Resources)
+        return '#10b981'; // Mint Green
       case 'AccessGate':
       case 'OwnerRef':
       case 'CapabilityRef':
-        return '#06b6d4'; // Cyan (Capabilities)
-      case 'EventRef':
+        return '#06b6d4'; // Cyan
+      case 'PauseGate':
+        return '#ef4444'; // Red
       case 'FeeConfig':
       case 'RoyaltyConfig':
-        return '#8b5cf6'; // Violet (Event handles / configs)
+      case 'GovernanceRef':
+        return '#f59e0b'; // Amber
       default:
         return '#0f766e'; // Deep Teal
     }
   };
+
+  const hasInPorts = Boolean(spec.ports?.in && spec.ports.in.length > 0);
+  const hasOutPorts = Boolean(spec.ports?.out && spec.ports.out.length > 0);
 
   return (
     <div
@@ -172,14 +183,13 @@ export const BlockNode: React.FC<BlockNodeProps> = ({ id, data }) => {
         background: '#ffffff',
         border: `1px solid ${isSelected ? '#0f766e' : '#cbd5e1'}`,
         borderRadius: '12px',
-        padding: '0 0 14px 0',
+        padding: '0 0 12px 0',
         minWidth: '280px',
-        maxWidth: '310px',
+        maxWidth: '320px',
         boxShadow: isSelected
           ? '0 0 0 2px #0f766e, 0 8px 16px -4px rgba(15, 118, 110, 0.2)'
           : 'var(--shadow-node)',
         position: 'relative',
-        overflow: 'hidden',
         transition: 'all 0.2s ease',
       }}
     >
@@ -189,39 +199,25 @@ export const BlockNode: React.FC<BlockNodeProps> = ({ id, data }) => {
           height: '8px',
           width: '100%',
           background: friendly.stripeColor,
+          borderRadius: '11px 11px 0 0',
         }}
       />
 
-      <div style={{ padding: '12px 14px 0 14px' }}>
-        {/* Header with Title, Struct and Status Badge */}
+      <div style={{ padding: '12px 14px 4px 14px' }}>
+        {/* Header with Icon, Title and Status */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <span style={{ fontSize: '1.25rem', lineHeight: 1 }}>{friendly.icon}</span>
             <div>
-              <div
-                style={{
-                  fontSize: '0.9375rem',
-                  fontWeight: 700,
-                  color: 'var(--text-primary)',
-                  letterSpacing: '-0.01em',
-                }}
-              >
+              <div style={{ fontSize: '0.9375rem', fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.01em' }}>
                 {friendly.title}
               </div>
-              <div
-                style={{
-                  fontSize: '0.6875rem',
-                  fontFamily: 'var(--font-mono)',
-                  color: 'var(--text-muted)',
-                  marginTop: '1px',
-                }}
-              >
+              <div style={{ fontSize: '0.6875rem', fontFamily: 'var(--font-mono)', color: 'var(--text-muted)', marginTop: '1px' }}>
                 {friendly.structName}
               </div>
             </div>
           </div>
 
-          {/* Status Pill */}
           <div
             style={{
               padding: '2px 8px',
@@ -237,13 +233,13 @@ export const BlockNode: React.FC<BlockNodeProps> = ({ id, data }) => {
               gap: '4px',
             }}
           >
-            {status === 'valid' ? <CheckCircle2 size={11} /> : <AlertTriangle size={11} />}
+            <CheckCircle2 size={11} />
             {status === 'valid' ? 'Verified' : 'Check'}
           </div>
         </div>
 
-        {/* Subtitle / Plain English explanation */}
-        <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', lineHeight: 1.4, marginBottom: '10px' }}>
+        {/* Subtitle description */}
+        <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', lineHeight: 1.4, marginBottom: '8px' }}>
           {friendly.subtitle}
         </p>
 
@@ -253,12 +249,12 @@ export const BlockNode: React.FC<BlockNodeProps> = ({ id, data }) => {
             style={{
               background: 'var(--surface-container-low)',
               borderRadius: '6px',
-              padding: '6px 10px',
+              padding: '5px 8px',
               fontSize: '0.72rem',
               fontFamily: 'var(--font-mono)',
               color: 'var(--text-secondary)',
               border: '1px solid var(--border-subtle)',
-              marginBottom: '4px',
+              marginBottom: '6px',
             }}
           >
             {Object.entries(props)
@@ -281,65 +277,111 @@ export const BlockNode: React.FC<BlockNodeProps> = ({ id, data }) => {
               background: 'var(--primary-container)',
               borderRadius: '6px',
               padding: '4px 8px',
-              marginTop: '8px',
+              marginBottom: '8px',
               display: 'flex',
               alignItems: 'center',
               gap: '4px',
             }}
           >
             <span>💡</span>
-            <span>Aptos Move Standard: {friendly.category}</span>
+            <span>{friendly.category}</span>
           </div>
         )}
       </div>
 
-      {/* Input Ports (Left) */}
-      {spec.ports?.in.map((port, idx) => {
-        const dotColor = getPortDotColor(port.type);
-        return (
-          <Handle
-            key={port.name}
-            type="target"
-            position={Position.Left}
-            id={port.name}
-            style={{
-              top: `${54 + idx * 26}px`,
-              background: dotColor,
-              width: '12px',
-              height: '12px',
-              border: '2px solid #ffffff',
-              borderRadius: '50%',
-              boxShadow: '0 0 0 1px #cbd5e1',
-              cursor: 'crosshair',
-            }}
-            title={`Input Port: ${port.name} (${port.type})`}
-          />
-        );
-      })}
+      {/* --- Clear Labeled Ports Section (Direct Handle Alignment) --- */}
+      {(hasInPorts || hasOutPorts) && (
+        <div
+          style={{
+            borderTop: '1px solid var(--border-subtle)',
+            paddingTop: '8px',
+            margin: '0 14px',
+            display: 'flex',
+            justifyContent: 'space-between',
+            gap: '12px',
+          }}
+        >
+          {/* In Ports (Left) */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', flex: 1 }}>
+            {spec.ports?.in.map((port) => {
+              const dotColor = getPortDotColor(port.type);
+              return (
+                <div key={port.name} style={{ display: 'flex', alignItems: 'center', position: 'relative' }}>
+                  <Handle
+                    type="target"
+                    position={Position.Left}
+                    id={port.name}
+                    style={{
+                      left: '-14px',
+                      background: dotColor,
+                      width: '12px',
+                      height: '12px',
+                      border: '2px solid #ffffff',
+                      borderRadius: '50%',
+                      boxShadow: '0 0 0 1px #cbd5e1',
+                      cursor: 'crosshair',
+                    }}
+                    title={`Input: ${port.name} (${port.type})`}
+                  />
+                  <span
+                    style={{
+                      fontSize: '0.6875rem',
+                      fontFamily: 'var(--font-mono)',
+                      color: 'var(--text-muted)',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                    }}
+                  >
+                    <span style={{ width: '5px', height: '5px', borderRadius: '50%', background: dotColor }} />
+                    ← {port.name}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
 
-      {/* Output Ports (Right) */}
-      {spec.ports?.out.map((port, idx) => {
-        const dotColor = getPortDotColor(port.type);
-        return (
-          <Handle
-            key={port.name}
-            type="source"
-            position={Position.Right}
-            id={port.name}
-            style={{
-              top: `${54 + idx * 26}px`,
-              background: dotColor,
-              width: '12px',
-              height: '12px',
-              border: '2px solid #ffffff',
-              borderRadius: '50%',
-              boxShadow: '0 0 0 1px #cbd5e1',
-              cursor: 'crosshair',
-            }}
-            title={`Output Port: ${port.name} (${port.type})`}
-          />
-        );
-      })}
+          {/* Out Ports (Right) */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'flex-end', flex: 1 }}>
+            {spec.ports?.out.map((port) => {
+              const dotColor = getPortDotColor(port.type);
+              return (
+                <div key={port.name} style={{ display: 'flex', alignItems: 'center', position: 'relative' }}>
+                  <span
+                    style={{
+                      fontSize: '0.6875rem',
+                      fontFamily: 'var(--font-mono)',
+                      color: 'var(--text-muted)',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                    }}
+                  >
+                    {port.name} →
+                    <span style={{ width: '5px', height: '5px', borderRadius: '50%', background: dotColor }} />
+                  </span>
+                  <Handle
+                    type="source"
+                    position={Position.Right}
+                    id={port.name}
+                    style={{
+                      right: '-14px',
+                      background: dotColor,
+                      width: '12px',
+                      height: '12px',
+                      border: '2px solid #ffffff',
+                      borderRadius: '50%',
+                      boxShadow: '0 0 0 1px #cbd5e1',
+                      cursor: 'crosshair',
+                    }}
+                    title={`Output: ${port.name} (${port.type})`}
+                  />
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

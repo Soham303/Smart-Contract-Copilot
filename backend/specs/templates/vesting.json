@@ -1,8 +1,8 @@
 {
   "id": "template_vesting",
-  "name": "Token Vesting",
+  "name": "Timed Token Vesting",
   "category": "Finance",
-  "description": "Linear vesting contract releasing team/investor tokens following a 30-day cliff schedule.",
+  "description": "Linear vesting vault releasing team allocation tokens following a 180-day cliff schedule.",
   "graph": {
     "schemaVersion": "1.0",
     "target": "aptos-move",
@@ -13,7 +13,16 @@
     "blocks": [
       {
         "id": "b1",
+        "type": "access.owner",
+        "position": { "x": 60, "y": 180 },
+        "props": {
+          "transferable": true
+        }
+      },
+      {
+        "id": "b2",
         "type": "finance.vesting",
+        "position": { "x": 440, "y": 180 },
         "props": {
           "beneficiary": "0x3",
           "cliffDurationSec": 2592000,
@@ -22,11 +31,30 @@
         }
       },
       {
-        "id": "b2",
-        "type": "access.owner",
-        "props": {}
+        "id": "b3",
+        "type": "token.fungible",
+        "position": { "x": 820, "y": 180 },
+        "props": {
+          "name": "TeamToken",
+          "symbol": "TEAM",
+          "decimals": 8,
+          "maxSupply": 10000000
+        }
       }
     ],
-    "edges": []
+    "edges": [
+      {
+        "from": "b1",
+        "fromPort": "owner",
+        "to": "b2",
+        "toPort": "admin"
+      },
+      {
+        "from": "b2",
+        "fromPort": "vesting_out",
+        "to": "b3",
+        "toPort": "mint"
+      }
+    ]
   }
 }

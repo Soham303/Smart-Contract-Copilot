@@ -1,8 +1,8 @@
 {
   "id": "template_escrow",
-  "name": "Escrow",
+  "name": "Trustless Trade Escrow",
   "category": "Finance",
-  "description": "Secure fund release between buyer and seller, with arbiter dispute access and refund timeout.",
+  "description": "Two-party conditional trade escrow with arbiter dispute access and 7-day auto-refund timeout.",
   "graph": {
     "schemaVersion": "1.0",
     "target": "aptos-move",
@@ -13,7 +13,16 @@
     "blocks": [
       {
         "id": "b1",
+        "type": "access.owner",
+        "position": { "x": 60, "y": 180 },
+        "props": {
+          "transferable": true
+        }
+      },
+      {
+        "id": "b2",
         "type": "finance.escrow",
+        "position": { "x": 440, "y": 180 },
         "props": {
           "beneficiary": "0x2",
           "timeoutSec": 86400,
@@ -21,17 +30,29 @@
         }
       },
       {
-        "id": "b2",
-        "type": "access.owner",
-        "props": {}
+        "id": "b3",
+        "type": "token.fungible",
+        "position": { "x": 820, "y": 180 },
+        "props": {
+          "name": "EscrowCoin",
+          "symbol": "ESCROW",
+          "decimals": 8,
+          "maxSupply": 5000000
+        }
       }
     ],
     "edges": [
       {
-        "from": "b2",
+        "from": "b1",
         "fromPort": "owner",
-        "to": "b1",
+        "to": "b2",
         "toPort": "arbiter"
+      },
+      {
+        "from": "b2",
+        "fromPort": "escrow_out",
+        "to": "b3",
+        "toPort": "mint"
       }
     ]
   }

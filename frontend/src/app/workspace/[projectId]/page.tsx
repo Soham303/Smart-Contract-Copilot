@@ -12,6 +12,7 @@ import {
   Connection,
   Edge,
   Node,
+  MarkerType,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 
@@ -52,8 +53,11 @@ import {
   BookOpen,
   CheckCircle2,
   Cpu,
-  Layers,
   FileCode,
+  Code2,
+  PanelRightClose,
+  PanelRightOpen,
+  X,
 } from 'lucide-react';
 
 interface BlockNodeData {
@@ -74,7 +78,9 @@ export default function WorkspacePage({ params }: { params: { projectId: string 
   const [templates, setTemplates] = useState<any[]>([]);
   const [concepts, setConcepts] = useState<any[]>([]);
 
-  const [activeTab, setActiveTab] = useState<'properties' | 'code' | 'audit' | 'gas' | 'permissions' | 'learn'>('properties');
+  // Inspector & Code Drawer Toggle (User can show/unshow freely)
+  const [isInspectorOpen, setIsInspectorOpen] = useState<boolean>(false);
+  const [activeTab, setActiveTab] = useState<'properties' | 'code' | 'audit' | 'gas' | 'permissions' | 'learn'>('code');
   const [learningMode, setLearningMode] = useState<boolean>(true);
   const [gridSnap, setGridSnap] = useState<boolean>(true);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
@@ -96,7 +102,7 @@ export default function WorkspacePage({ params }: { params: { projectId: string 
   // Modals
   const [isPromptDrawerOpen, setIsPromptDrawerOpen] = useState(false);
   const [isDeployModalOpen, setIsDeployModalOpen] = useState(false);
-  const [consoleMsg, setConsoleMsg] = useState('Topology: Ready • 0 Cycles • Aptos Move Prover Active');
+  const [consoleMsg, setConsoleMsg] = useState('Topology: Ready • Smooth Orthogonal Routing Active');
 
   // React Flow Nodes & Edges
   const [nodes, setNodes, onNodesChange] = useNodesState<Node<BlockNodeData>>([]);
@@ -175,7 +181,7 @@ export default function WorkspacePage({ params }: { params: { projectId: string 
     }
   }, [getGraphObject]);
 
-  // Convert graph to React Flow nodes/edges
+  // Convert graph to React Flow nodes/edges with clean left-to-right routing
   const loadGraphIntoCanvas = useCallback((graph: any, allBlocks: BlockSpec[]) => {
     const specsMap: Record<string, BlockSpec> = {};
     allBlocks.forEach((b) => { specsMap[b.type] = b; });
@@ -189,10 +195,25 @@ export default function WorkspacePage({ params }: { params: { projectId: string 
         props: {},
       };
 
+      // Clean default left-to-right layout if no position provided:
+      // Access (left: 60), Gate/Config (middle: 440), Asset/Store (right: 820)
+      let defaultX = 80 + idx * 360;
+      let defaultY = 160;
+      if (b.type.startsWith('access.')) {
+        defaultX = 60;
+        defaultY = 140 + idx * 160;
+      } else if (b.type.includes('mint_control') || b.type.includes('pause') || b.type.includes('royalty')) {
+        defaultX = 440;
+        defaultY = 80 + (idx % 2) * 220;
+      } else if (b.type.startsWith('token.') || b.type.startsWith('nft.') || b.type.startsWith('finance.')) {
+        defaultX = 820;
+        defaultY = 160;
+      }
+
       return {
         id: b.id,
         type: 'blockNode',
-        position: b.position || { x: 80 + (idx % 3) * 280, y: 80 + Math.floor(idx / 3) * 220 },
+        position: b.position || { x: defaultX, y: defaultY },
         data: {
           spec,
           props: b.props || {},
@@ -203,14 +224,21 @@ export default function WorkspacePage({ params }: { params: { projectId: string 
       };
     });
 
+    // Clean, structured smoothstep edges with visible arrow markers
     const newEdges: Edge[] = (graph.edges || []).map((e: any, idx: number) => ({
       id: `e_${e.from}_${e.to}_${idx}`,
       source: e.from,
       sourceHandle: e.fromPort,
       target: e.to,
       targetHandle: e.toPort,
-      animated: true,
-      style: { stroke: '#0f766e', strokeWidth: 2 },
+      type: 'smoothstep',
+      style: { stroke: '#0f766e', strokeWidth: 2.5 },
+      markerEnd: {
+        type: MarkerType.ArrowClosed,
+        color: '#0f766e',
+        width: 14,
+        height: 14,
+      },
     }));
 
     setNodes(newNodes);
@@ -246,11 +274,24 @@ export default function WorkspacePage({ params }: { params: { projectId: string 
     init();
   }, [loadGraphIntoCanvas]);
 
-  // Connect ports
+  // Connect ports with clean orthogonal smoothstep edge
   const onConnect = useCallback(
     (connection: Connection) => {
       setEdges((eds) => {
-        const updated = addEdge({ ...connection, animated: true, style: { stroke: '#0f766e', strokeWidth: 2 } }, eds);
+        const updated = addEdge(
+          {
+            ...connection,
+            type: 'smoothstep',
+            style: { stroke: '#0f766e', strokeWidth: 2.5 },
+            markerEnd: {
+              type: MarkerType.ArrowClosed,
+              color: '#0f766e',
+              width: 14,
+              height: 14,
+            },
+          },
+          eds
+        );
         triggerPipeline(nodes, updated);
         return updated;
       });
@@ -311,6 +352,7 @@ export default function WorkspacePage({ params }: { params: { projectId: string 
   const onNodeClick = (_: any, node: Node) => {
     setSelectedNodeId(node.id);
     setActiveTab('properties');
+    setIsInspectorOpen(true);
   };
 
   const selectedNode = nodes.find((n) => n.id === selectedNodeId);
@@ -436,8 +478,33 @@ export default function WorkspacePage({ params }: { params: { projectId: string 
           </button>
         </div>
 
-        {/* Right Action CTAs: Emerald Check & Audit, Amber Gas Sim, Teal Deploy Gate */}
+        {/* Right Action CTAs + TOGGLE CODE DISPLAY BUTTON */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          
+          {/* Prominent Code & Inspector Toggle Button */}
+          <button
+            onClick={() => setIsInspectorOpen(!isInspectorOpen)}
+            id="toggle-inspector-btn"
+            style={{
+              background: isInspectorOpen ? 'var(--primary-container)' : 'var(--surface-container-low)',
+              color: isInspectorOpen ? 'var(--primary)' : 'var(--text-primary)',
+              border: `1px solid ${isInspectorOpen ? 'var(--primary)' : 'var(--border-subtle)'}`,
+              padding: '6px 12px',
+              borderRadius: '6px',
+              fontWeight: 600,
+              fontSize: '0.78rem',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              cursor: 'pointer',
+              transition: 'all 0.15s ease',
+            }}
+            title={isInspectorOpen ? 'Hide code display and inspector' : 'Show code display and inspector'}
+          >
+            {isInspectorOpen ? <PanelRightClose size={14} /> : <Code2 size={14} />}
+            <span>{isInspectorOpen ? 'Hide Code & Inspector' : 'Show Code & Inspector'}</span>
+          </button>
+
           {/* Prompt-to-Block AI Trigger */}
           <button
             onClick={() => setIsPromptDrawerOpen(true)}
@@ -479,7 +546,7 @@ export default function WorkspacePage({ params }: { params: { projectId: string 
             }}
           >
             <Flame size={14} />
-            Gas Profiler [Demo]
+            Gas Profiler
           </button>
 
           {/* Emerald Check & Audit */}
@@ -501,7 +568,7 @@ export default function WorkspacePage({ params }: { params: { projectId: string 
             }}
           >
             <ShieldCheck size={14} />
-            Verify AST & Audit
+            Verify AST
           </button>
 
           {/* Teal Pre-Deploy Gate */}
@@ -524,15 +591,15 @@ export default function WorkspacePage({ params }: { params: { projectId: string 
             }}
           >
             <Rocket size={14} />
-            Pre-Deploy Gate
+            Pre-Deploy
           </button>
         </div>
       </div>
 
-      {/* --- Main 3-Column Studio Workspace --- */}
+      {/* --- Main Studio Workspace (Canvas + Optional Collapsible Inspector) --- */}
       <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
         
-        {/* Column 1: Primitives Library + Templates (280px) */}
+        {/* Left Column: Primitives Library + Templates (280px) */}
         <aside
           style={{
             width: '280px',
@@ -576,7 +643,7 @@ export default function WorkspacePage({ params }: { params: { projectId: string 
               const newNode: Node<BlockNodeData> = {
                 id: newId,
                 type: 'blockNode',
-                position: { x: 200, y: 150 },
+                position: { x: 300, y: 180 },
                 data: {
                   spec,
                   props: Object.fromEntries(Object.entries(spec.props || {}).map(([k, v]) => [k, v.default ?? ''])),
@@ -600,7 +667,7 @@ export default function WorkspacePage({ params }: { params: { projectId: string 
           </div>
         </aside>
 
-        {/* Column 2: 2D Infinite Dot-Grid Canvas with HUD (Flex Grow) */}
+        {/* Center: React Flow Canvas (Takes Full Width when Inspector is hidden!) */}
         <main
           style={{
             flex: 1,
@@ -649,6 +716,34 @@ export default function WorkspacePage({ params }: { params: { projectId: string 
             </button>
           </div>
 
+          {/* Floating Button when Inspector is Closed */}
+          {!isInspectorOpen && (
+            <button
+              onClick={() => setIsInspectorOpen(true)}
+              style={{
+                position: 'absolute',
+                top: '1rem',
+                right: '1rem',
+                background: '#ffffff',
+                border: '1px solid var(--border-strong)',
+                borderRadius: '8px',
+                padding: '6px 12px',
+                fontSize: '0.75rem',
+                fontWeight: 600,
+                color: 'var(--primary)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                boxShadow: 'var(--shadow-md)',
+                zIndex: 15,
+                cursor: 'pointer',
+              }}
+            >
+              <PanelRightOpen size={14} />
+              <span>Show Code & Inspector</span>
+            </button>
+          )}
+
           <ReactFlow
             nodes={nodes}
             edges={edges}
@@ -689,8 +784,8 @@ export default function WorkspacePage({ params }: { params: { projectId: string 
               position: 'absolute',
               bottom: '1rem',
               left: '1rem',
-              right: '1rem',
-              background: 'rgba(255, 255, 255, 0.92)',
+              right: isInspectorOpen ? '1rem' : '1rem',
+              background: 'rgba(255, 255, 255, 0.95)',
               backdropFilter: 'blur(12px)',
               border: '1px solid var(--border-subtle)',
               borderRadius: '8px',
@@ -716,142 +811,170 @@ export default function WorkspacePage({ params }: { params: { projectId: string 
           </div>
         </main>
 
-        {/* Column 3: Dark Inspector Panel & Live Code (380px - 440px) */}
-        <aside
-          style={{
-            width: '420px',
-            borderLeft: '1px solid var(--border-subtle)',
-            background: 'var(--code-canvas)',
-            color: 'var(--code-text)',
-            display: 'flex',
-            flexDirection: 'column',
-          }}
-        >
-          {/* Tabs Header */}
-          <div
+        {/* --- Collapsible Code Display & Inspector (Column 3) --- */}
+        {isInspectorOpen && (
+          <aside
             style={{
+              width: '440px',
+              borderLeft: '1px solid var(--border-subtle)',
+              background: 'var(--code-canvas)',
+              color: 'var(--code-text)',
               display: 'flex',
-              borderBottom: '1px solid #1e293b',
-              fontSize: '0.75rem',
-              background: '#090d16',
+              flexDirection: 'column',
+              position: 'relative',
+              animation: 'fadeIn 0.2s ease',
             }}
           >
-            {[
-              { id: 'properties', label: 'Properties & Config' },
-              { id: 'code', label: 'Generated Move Code' },
-              { id: 'audit', label: `Safety & AST (${findings.length})` },
-              { id: 'gas', label: 'Gas Matrix' },
-              { id: 'permissions', label: 'Permissions' },
-              { id: 'learn', label: 'Learn' },
-            ].map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id as any)}
-                style={{
-                  flex: 1,
-                  padding: '10px 4px',
-                  background: 'transparent',
-                  border: 'none',
-                  color: activeTab === tab.id ? '#ffffff' : '#94a3b8',
-                  borderBottom: activeTab === tab.id ? '2px solid var(--primary)' : '2px solid transparent',
-                  fontWeight: activeTab === tab.id ? 700 : 500,
-                  fontSize: '0.72rem',
-                  cursor: 'pointer',
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                {tab.label}
-              </button>
-            ))}
-          </div>
-
-          {/* Code Header Bar with Sync Badge and Download */}
-          {activeTab === 'code' && (
+            {/* Tabs Header + Close Button */}
             <div
               style={{
-                padding: '6px 12px',
-                background: '#0e1526',
-                borderBottom: '1px solid #1e293b',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
-                fontSize: '0.72rem',
-                fontFamily: 'var(--font-mono)',
+                borderBottom: '1px solid #1e293b',
+                background: '#090d16',
+                paddingRight: '6px',
               }}
             >
-              <span style={{ color: '#34d399' }}>● Synced in 120ms • Verified AST</span>
+              <div style={{ display: 'flex', flex: 1, overflowX: 'auto' }}>
+                {[
+                  { id: 'code', label: 'Generated Code' },
+                  { id: 'properties', label: 'Properties' },
+                  { id: 'audit', label: `Audit (${findings.length})` },
+                  { id: 'gas', label: 'Gas Matrix' },
+                  { id: 'permissions', label: 'Permissions' },
+                  { id: 'learn', label: 'Learn' },
+                ].map((tab) => (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id as any)}
+                    style={{
+                      padding: '10px 8px',
+                      background: 'transparent',
+                      border: 'none',
+                      color: activeTab === tab.id ? '#ffffff' : '#94a3b8',
+                      borderBottom: activeTab === tab.id ? '2px solid var(--primary)' : '2px solid transparent',
+                      fontWeight: activeTab === tab.id ? 700 : 500,
+                      fontSize: '0.72rem',
+                      cursor: 'pointer',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
+
+              {/* Close / Collapse Button */}
               <button
-                onClick={handleDownloadMoveFile}
+                onClick={() => setIsInspectorOpen(false)}
+                title="Collapse inspector"
                 style={{
+                  width: '26px',
+                  height: '26px',
+                  borderRadius: '4px',
                   background: 'rgba(255, 255, 255, 0.08)',
                   border: '1px solid #334155',
-                  color: '#ffffff',
-                  borderRadius: '4px',
-                  padding: '2px 8px',
-                  fontSize: '0.6875rem',
+                  color: '#cbd5e1',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '4px',
+                  justifyContent: 'center',
                   cursor: 'pointer',
+                  marginLeft: '4px',
                 }}
               >
-                <Download size={11} />
-                .move file
+                <X size={14} />
               </button>
             </div>
-          )}
 
-          {/* Panel Content */}
-          <div style={{ flex: 1, padding: '1rem', overflowY: 'auto' }}>
-            {activeTab === 'properties' && (
-              <PropertiesPanel
-                selectedBlock={
-                  selectedNode
-                    ? {
-                        id: selectedNode.id,
-                        type: selectedNode.data.spec?.type,
-                        props: selectedNode.data.props,
-                        spec: selectedNode.data.spec,
-                      }
-                    : null
-                }
-                onUpdateProps={handleUpdateProps}
-                onDeleteBlock={(id) => setNodes((nds) => nds.filter((n) => n.id !== id))}
-              />
-            )}
+            {/* Code Header Bar with Sync Badge and Download */}
             {activeTab === 'code' && (
-              <LiveCodePanel
-                files={generatedFiles}
-                sourceMap={sourceMap}
-              />
+              <div
+                style={{
+                  padding: '6px 12px',
+                  background: '#0e1526',
+                  borderBottom: '1px solid #1e293b',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  fontSize: '0.72rem',
+                  fontFamily: 'var(--font-mono)',
+                }}
+              >
+                <span style={{ color: '#34d399' }}>● Synced in 120ms • Verified AST</span>
+                <button
+                  onClick={handleDownloadMoveFile}
+                  style={{
+                    background: 'rgba(255, 255, 255, 0.08)',
+                    border: '1px solid #334155',
+                    color: '#ffffff',
+                    borderRadius: '4px',
+                    padding: '2px 8px',
+                    fontSize: '0.6875rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    cursor: 'pointer',
+                  }}
+                >
+                  <Download size={11} />
+                  .move file
+                </button>
+              </div>
             )}
-            {activeTab === 'audit' && (
-              <AuditPanel
-                riskScore={riskScore}
-                riskBand={riskBand}
-                findings={findings}
-                onSelectBlock={(bId) => { setSelectedNodeId(bId); setActiveTab('properties'); }}
-                onRefreshAudit={() => triggerPipeline(nodes, edges)}
-              />
-            )}
-            {activeTab === 'gas' && (
-              <GasPanel
-                gasReport={gasReport}
-              />
-            )}
-            {activeTab === 'permissions' && (
-              <PermissionsPanel
-                permissionsData={permissionsData}
-              />
-            )}
-            {activeTab === 'learn' && (
-              <LearningPanel
-                concepts={concepts}
-                selectedBlockType={selectedNode?.data.spec?.type}
-              />
-            )}
-          </div>
-        </aside>
+
+            {/* Panel Content */}
+            <div style={{ flex: 1, padding: '1rem', overflowY: 'auto' }}>
+              {activeTab === 'properties' && (
+                <PropertiesPanel
+                  selectedBlock={
+                    selectedNode
+                      ? {
+                          id: selectedNode.id,
+                          type: selectedNode.data.spec?.type,
+                          props: selectedNode.data.props,
+                          spec: selectedNode.data.spec,
+                        }
+                      : null
+                }
+                  onUpdateProps={handleUpdateProps}
+                  onDeleteBlock={(id) => setNodes((nds) => nds.filter((n) => n.id !== id))}
+                />
+              )}
+              {activeTab === 'code' && (
+                <LiveCodePanel
+                  files={generatedFiles}
+                  sourceMap={sourceMap}
+                />
+              )}
+              {activeTab === 'audit' && (
+                <AuditPanel
+                  riskScore={riskScore}
+                  riskBand={riskBand}
+                  findings={findings}
+                  onSelectBlock={(bId) => { setSelectedNodeId(bId); setActiveTab('properties'); }}
+                  onRefreshAudit={() => triggerPipeline(nodes, edges)}
+                />
+              )}
+              {activeTab === 'gas' && (
+                <GasPanel
+                  gasReport={gasReport}
+                />
+              )}
+              {activeTab === 'permissions' && (
+                <PermissionsPanel
+                  permissionsData={permissionsData}
+                />
+              )}
+              {activeTab === 'learn' && (
+                <LearningPanel
+                  concepts={concepts}
+                  selectedBlockType={selectedNode?.data.spec?.type}
+                />
+              )}
+            </div>
+          </aside>
+        )}
       </div>
 
       {/* Modals & Drawers */}

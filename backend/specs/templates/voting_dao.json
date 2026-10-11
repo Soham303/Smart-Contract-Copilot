@@ -1,8 +1,8 @@
 {
   "id": "template_voting_dao",
-  "name": "Voting / DAO",
+  "name": "Lightweight DAO & Voting",
   "category": "Governance",
-  "description": "Decentralized autonomous organization governance with proposal creation, 20% quorum, and majority vote.",
+  "description": "Decentralized autonomous organization governance with proposal creation, 20% quorum threshold, and majority vote.",
   "graph": {
     "schemaVersion": "1.0",
     "target": "aptos-move",
@@ -13,29 +13,34 @@
     "blocks": [
       {
         "id": "b1",
-        "type": "governance.voting_proposal",
+        "type": "access.owner",
+        "position": { "x": 60, "y": 180 },
         "props": {
-          "quorumPct": 20,
-          "votingPeriodSec": 259200,
-          "passThresholdPct": 51
+          "transferable": true
         }
       },
       {
         "id": "b2",
         "type": "access.role",
+        "position": { "x": 440, "y": 180 },
         "props": {
           "roleName": "COUNCIL"
         }
       },
       {
         "id": "b3",
-        "type": "access.owner",
-        "props": {}
+        "type": "governance.voting_proposal",
+        "position": { "x": 820, "y": 180 },
+        "props": {
+          "quorumPct": 20,
+          "votingPeriodSec": 259200,
+          "passThresholdPct": 51
+        }
       }
     ],
     "edges": [
       {
-        "from": "b3",
+        "from": "b1",
         "fromPort": "owner",
         "to": "b2",
         "toPort": "manager"

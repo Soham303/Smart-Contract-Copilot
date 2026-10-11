@@ -1,8 +1,8 @@
 {
   "id": "template_staking",
-  "name": "Staking & Rewards",
+  "name": "Yield Staking Pool",
   "category": "Finance",
-  "description": "Yield-generating staking pool with 7-day lockup duration and continuous reward distribution.",
+  "description": "Yield-generating staking pool with 7-day lockup duration, emergency pause circuit breaker, and continuous reward distribution.",
   "graph": {
     "schemaVersion": "1.0",
     "target": "aptos-move",
@@ -13,31 +13,42 @@
     "blocks": [
       {
         "id": "b1",
-        "type": "finance.staking",
+        "type": "access.owner",
+        "position": { "x": 60, "y": 180 },
         "props": {
-          "rewardRatePerSec": 10,
-          "lockupDurationSec": 604800
+          "transferable": true
         }
       },
       {
         "id": "b2",
         "type": "access.pausable",
+        "position": { "x": 440, "y": 180 },
         "props": {
           "initiallyPaused": false
         }
       },
       {
         "id": "b3",
-        "type": "access.owner",
-        "props": {}
+        "type": "finance.staking",
+        "position": { "x": 820, "y": 180 },
+        "props": {
+          "rewardRatePerSec": 10,
+          "lockupDurationSec": 604800
+        }
       }
     ],
     "edges": [
       {
-        "from": "b3",
+        "from": "b1",
         "fromPort": "owner",
         "to": "b2",
         "toPort": "admin"
+      },
+      {
+        "from": "b2",
+        "fromPort": "pause_gate",
+        "to": "b3",
+        "toPort": "pause"
       }
     ]
   }
