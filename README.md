@@ -4,6 +4,9 @@
 
 A visual-first web platform for designing, verifying, optimizing, and deploying Aptos Move smart contracts with deterministic code generation, automated rule-based security audits, measured gas optimization, plain-English permissions analysis, and exportable PDF audit reports.
 
+Drive Link : https://drive.google.com/drive/folders/1uYyNpsGkhI1vezMmkpjGHSNwMyEzkb-L?usp=drive_link
+Youtube Link : https://youtu.be/c9g5KWalK-U
+
 ---
 
 ## Architecture Overview
