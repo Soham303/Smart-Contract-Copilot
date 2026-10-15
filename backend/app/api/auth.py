@@ -1,22 +1,9 @@
 import hashlib
-import os
-import time
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import create_access_token, create_refresh_token, jwt_required, get_jwt_identity
+from app.core.db.repository import db_repo
 
 auth_bp = Blueprint("auth", __name__)
-
-# In-memory users store as resilient fallback for development and test environments
-USERS_DB = {
-    "demo@copilot.io": {
-        "id": "usr_demo",
-        "email": "demo@copilot.io",
-        "passwordHash": hashlib.sha256("copilot123".encode()).hexdigest(),
-        "name": "Demo Builder",
-        "plan": "developer",
-        "createdAt": time.time()
-    }
-}
 
 def hash_password(pwd: str) -> str:
     return hashlib.sha256(pwd.encode()).hexdigest()
@@ -35,32 +22,25 @@ def register():
     if len(password) < 6:
         return jsonify({"error": {"code": "WEAK_PASSWORD", "message": "Password must be at least 6 characters"}}), 400
 
-    if email in USERS_DB:
+    existing = db_repo.get_user_by_email(email)
+    if existing:
         return jsonify({"error": {"code": "USER_EXISTS", "message": "Account with this email already exists"}}), 409
 
-    user_id = f"usr_{int(time.time())}"
-    user_data = {
-        "id": user_id,
-        "email": email,
-        "passwordHash": hash_password(password),
-        "name": name,
-        "plan": "free",
-        "createdAt": time.time()
-    }
-    USERS_DB[email] = user_data
+    pwd_hash = hash_password(password)
+    user = db_repo.create_user(email, pwd_hash, name=name, plan="free")
 
-    access_token = create_access_token(identity=user_id)
-    refresh_token = create_refresh_token(identity=user_id)
+    access_token = create_access_token(identity=user["id"])
+    refresh_token = create_refresh_token(identity=user["id"])
 
     return jsonify({
         "message": "User registered successfully",
         "accessToken": access_token,
         "refreshToken": refresh_token,
         "user": {
-            "id": user_id,
-            "email": email,
-            "name": name,
-            "plan": "free"
+            "id": user["id"],
+            "email": user["email"],
+            "name": user["name"],
+            "plan": user["plan"]
         }
     }), 201
 
@@ -74,8 +54,13 @@ def login():
     if not email or not password:
         return jsonify({"error": {"code": "INVALID_INPUT", "message": "Email and password are required"}}), 400
 
-    user = USERS_DB.get(email)
-    valid_password = user and (user["passwordHash"] == hash_password(password) or (email == "demo@copilot.io" and password in ["demo", "copilot123"]))
+    user = db_repo.get_user_by_email(email)
+    pwd_hash = hash_password(password)
+    valid_password = user and (
+        user.get("passwordHash") == pwd_hash or
+        (email == "demo@copilot.io" and password in ["demo", "copilot123"])
+    )
+
     if not user or not valid_password:
         return jsonify({"error": {"code": "INVALID_CREDENTIALS", "message": "Invalid email or password"}}), 401
 
@@ -89,8 +74,8 @@ def login():
         "user": {
             "id": user["id"],
             "email": user["email"],
-            "name": user["name"],
-            "plan": user["plan"]
+            "name": user.get("name", ""),
+            "plan": user.get("plan", "free")
         }
     }), 200
 
@@ -110,16 +95,16 @@ def get_current_user():
     if not identity:
         return jsonify({"isGuest": True, "user": None}), 200
 
-    for user in USERS_DB.values():
-        if user["id"] == identity:
-            return jsonify({
-                "isGuest": False,
-                "user": {
-                    "id": user["id"],
-                    "email": user["email"],
-                    "name": user["name"],
-                    "plan": user["plan"]
-                }
-            }), 200
+    user = db_repo.get_user_by_id(identity)
+    if user:
+        return jsonify({
+            "isGuest": False,
+            "user": {
+                "id": user["id"],
+                "email": user["email"],
+                "name": user.get("name", ""),
+                "plan": user.get("plan", "free")
+            }
+        }), 200
 
     return jsonify({"isGuest": True, "user": None}), 200

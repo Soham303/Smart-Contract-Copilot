@@ -18,6 +18,15 @@ export function removeStoredToken() {
   }
 }
 
+function authHeaders(): Record<string, string> {
+  const token = getStoredToken();
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  return headers;
+}
+
 export async function loginUser(email: string, password: string) {
   const res = await fetch(`${API_BASE}/auth/login`, {
     method: 'POST',
@@ -44,6 +53,48 @@ export async function getAuthProfile() {
   return res.json();
 }
 
+// ==================== PROJECTS ====================
+export async function fetchProjects() {
+  const res = await fetch(`${API_BASE}/projects`, {
+    headers: authHeaders(),
+  });
+  return res.json();
+}
+
+export async function createProject(data: { name?: string; mode?: string; templateId?: string; graph?: any; network?: string }) {
+  const res = await fetch(`${API_BASE}/projects`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify(data),
+  });
+  return res.json();
+}
+
+export async function getProject(projectId: string) {
+  const res = await fetch(`${API_BASE}/projects/${projectId}`, {
+    headers: authHeaders(),
+  });
+  return res.json();
+}
+
+export async function updateProject(projectId: string, data: { name?: string; mode?: string; graph?: any; network?: string }) {
+  const res = await fetch(`${API_BASE}/projects/${projectId}`, {
+    method: 'PUT',
+    headers: authHeaders(),
+    body: JSON.stringify(data),
+  });
+  return res.json();
+}
+
+export async function deleteProject(projectId: string) {
+  const res = await fetch(`${API_BASE}/projects/${projectId}`, {
+    method: 'DELETE',
+    headers: authHeaders(),
+  });
+  return res.json();
+}
+
+// ==================== BLOCKS & TEMPLATES ====================
 export async function fetchBlocks() {
   const res = await fetch(`${API_BASE}/blocks`);
   return res.json();
@@ -69,6 +120,12 @@ export async function generateCode(graph: any) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(graph),
   });
+  return res.json();
+}
+
+// ==================== JOBS ====================
+export async function getJobStatus(jobId: string) {
+  const res = await fetch(`${API_BASE}/jobs/${jobId}`);
   return res.json();
 }
 
@@ -127,6 +184,25 @@ export async function generateReport(payload: any) {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
+  });
+  return res.json();
+}
+
+// ==================== DEPLOY ====================
+export async function buildDeployPayload(files: Record<string, string>, network: string = 'testnet') {
+  const res = await fetch(`${API_BASE}/deploy/payload`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify({ files, network }),
+  });
+  return res.json();
+}
+
+export async function recordDeployment(data: { projectId: string; network: string; address: string; txHash: string; codeHash?: string }) {
+  const res = await fetch(`${API_BASE}/deploy/record`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify(data),
   });
   return res.json();
 }

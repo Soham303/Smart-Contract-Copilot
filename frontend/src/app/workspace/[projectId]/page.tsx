@@ -37,6 +37,8 @@ import {
   runGasAnalysis,
   runPermissions,
   generateReport,
+  getProject,
+  updateProject,
 } from '../../../lib/api';
 
 import { BlockSpec } from '../../../types/blocks';
@@ -104,6 +106,11 @@ export default function WorkspacePage({ params }: { params: { projectId: string 
   const [isDeployModalOpen, setIsDeployModalOpen] = useState(false);
   const [consoleMsg, setConsoleMsg] = useState('Topology: Ready • Smooth Orthogonal Routing Active');
 
+  // Project & Autosave State
+  const [projectName, setProjectName] = useState<string>('SkyApes_Token_Vesting');
+  const [saveStatus, setSaveStatus] = useState<'saved' | 'saving' | 'unsaved'>('saved');
+  const autosaveTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
+
   // React Flow Nodes & Edges
   const [nodes, setNodes, onNodesChange] = useNodesState<Node<BlockNodeData>>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
@@ -113,12 +120,14 @@ export default function WorkspacePage({ params }: { params: { projectId: string 
 
   // Construct current ContractGraph object from canvas
   const getGraphObject = useCallback((currentNodes: Node<BlockNodeData>[], currentEdges: Edge[]) => {
+    const safeName = projectName.replace(/[^a-zA-Z0-9]/g, '') || 'SkyApesContract';
+    const safeMod = projectName.toLowerCase().replace(/[^a-zA-Z0-9_]/g, '_') || 'sky_apes_contract';
     return {
       schemaVersion: '1.0',
       target: 'aptos-move',
       meta: {
-        name: 'SkyApesContract',
-        moduleName: 'sky_apes_contract',
+        name: safeName,
+        moduleName: safeMod,
         version: '1.0.0',
       },
       blocks: currentNodes.map((n) => ({
@@ -134,10 +143,28 @@ export default function WorkspacePage({ params }: { params: { projectId: string 
         toPort: e.targetHandle || '',
       })),
     };
-  }, []);
+  }, [projectName]);
+
+  // Debounced 5s Autosave
+  const scheduleAutosave = useCallback((currentNodes: Node<BlockNodeData>[], currentEdges: Edge[]) => {
+    if (autosaveTimeoutRef.current) clearTimeout(autosaveTimeoutRef.current);
+    setSaveStatus('unsaved');
+    autosaveTimeoutRef.current = setTimeout(async () => {
+      setSaveStatus('saving');
+      try {
+        const graph = getGraphObject(currentNodes, currentEdges);
+        await updateProject(params.projectId, { graph, name: projectName });
+        setSaveStatus('saved');
+      } catch (e) {
+        console.warn('Autosave warning:', e);
+        setSaveStatus('unsaved');
+      }
+    }, 5000);
+  }, [getGraphObject, params.projectId, projectName]);
 
   // Sub-500ms Verification & Generation Pipeline
   const triggerPipeline = useCallback(async (currentNodes: Node<BlockNodeData>[], currentEdges: Edge[]) => {
+    scheduleAutosave(currentNodes, currentEdges);
     const graph = getGraphObject(currentNodes, currentEdges);
     setConsoleMsg('Verifying Move bytecode & invariants...');
     try {
@@ -262,10 +289,30 @@ export default function WorkspacePage({ params }: { params: { projectId: string 
         if (templatesRes.templates) setTemplates(templatesRes.templates);
         if (conceptsRes.concepts) setConcepts(conceptsRes.concepts);
 
-        // Load Fungible Token template by default
-        const defaultTmpl = templatesRes.templates?.find((t: any) => t.id === 'template_fungible_token') || templatesRes.templates?.[0];
-        if (defaultTmpl?.graph) {
-          loadGraphIntoCanvas(defaultTmpl.graph, blocksRes.blocks || []);
+        // Load Project Graph if existing, otherwise default template
+        let loaded = false;
+        if (params.projectId && params.projectId !== 'demo') {
+          try {
+            const projRes = await getProject(params.projectId);
+            if (projRes.project) {
+              if (projRes.project.name) {
+                setProjectName(projRes.project.name);
+              }
+              if (projRes.project.graph?.blocks?.length) {
+                loadGraphIntoCanvas(projRes.project.graph, blocksRes.blocks || []);
+                loaded = true;
+              }
+            }
+          } catch (err) {
+            console.warn('Could not load project graph:', err);
+          }
+        }
+
+        if (!loaded) {
+          const defaultTmpl = templatesRes.templates?.find((t: any) => t.id === 'template_fungible_token') || templatesRes.templates?.[0];
+          if (defaultTmpl?.graph) {
+            loadGraphIntoCanvas(defaultTmpl.graph, blocksRes.blocks || []);
+          }
         }
       } catch (e) {
         console.error('Init error:', e);
@@ -409,9 +456,30 @@ export default function WorkspacePage({ params }: { params: { projectId: string 
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
             <FileCode size={16} color="var(--primary)" />
-            <span style={{ fontSize: '0.85rem', fontWeight: 700, fontFamily: 'var(--font-mono)', color: 'var(--text-primary)' }}>
-              SkyApes_Token_Vesting.mv
-            </span>
+            <input
+              type="text"
+              value={projectName}
+              onChange={(e) => {
+                setProjectName(e.target.value);
+                setSaveStatus('unsaved');
+                scheduleAutosave(nodes, edges);
+              }}
+              title="Click to rename contract module"
+              style={{
+                fontSize: '0.85rem',
+                fontWeight: 700,
+                fontFamily: 'var(--font-mono)',
+                color: 'var(--text-primary)',
+                background: 'transparent',
+                border: '1px solid transparent',
+                borderRadius: '4px',
+                padding: '2px 4px',
+                outline: 'none',
+                maxWidth: '220px',
+              }}
+              onFocus={(e) => (e.target.style.borderColor = 'var(--primary)')}
+              onBlur={(e) => (e.target.style.borderColor = 'transparent')}
+            />
             <span
               style={{
                 fontSize: '0.6875rem',
@@ -422,15 +490,25 @@ export default function WorkspacePage({ params }: { params: { projectId: string 
                 borderRadius: '4px',
               }}
             >
-              v1.0-ir
+              .mv
             </span>
           </div>
 
           <span style={{ color: 'var(--border-strong)' }}>|</span>
 
-          <span style={{ color: 'var(--tertiary)', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 600 }}>
+          <span
+            style={{
+              color: saveStatus === 'saved' ? 'var(--tertiary)' : saveStatus === 'saving' ? 'var(--primary)' : 'var(--risk-medium)',
+              fontSize: '0.75rem',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+              fontWeight: 600,
+              fontFamily: 'var(--font-mono)',
+            }}
+          >
             <CheckCircle2 size={13} />
-            Autosaved
+            {saveStatus === 'saved' ? 'Autosaved' : saveStatus === 'saving' ? 'Autosaving (5s)...' : 'Unsaved Changes'}
           </span>
 
           <span style={{ color: 'var(--border-strong)' }}>|</span>
