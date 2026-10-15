@@ -22,17 +22,22 @@ def init_extensions(app):
     # Initialize MongoDB if available
     if MongoClient and "MONGO_URI" in app.config:
         try:
-            mongo_client = MongoClient(app.config["MONGO_URI"], serverSelectionTimeoutMS=2000)
+            client = MongoClient(app.config["MONGO_URI"], serverSelectionTimeoutMS=300)
+            client.admin.command('ping')
+            mongo_client = client
             db_name = app.config["MONGO_URI"].split("/")[-1].split("?")[0] or "smart_contract_copilot"
             db = mongo_client[db_name]
         except Exception as e:
-            app.logger.warning(f"Could not connect to MongoDB: {e}")
+            app.logger.info(f"MongoDB not available ({e}). Using resilient in-memory repository.")
+            mongo_client = None
             db = None
 
     # Initialize Redis if available
     if redis and "REDIS_URL" in app.config:
         try:
-            redis_client = redis.from_url(app.config["REDIS_URL"])
+            client = redis.from_url(app.config["REDIS_URL"], socket_timeout=0.3)
+            client.ping()
+            redis_client = client
         except Exception as e:
-            app.logger.warning(f"Could not connect to Redis: {e}")
+            app.logger.info(f"Redis not available ({e}). Using direct task queue.")
             redis_client = None

@@ -1473,7 +1473,9 @@ export default function WorkspacePage({ params }: { params: { projectId: string 
         onClose={() => setIsDeployModalOpen(false)}
         hasCompilePassed={true}
         criticalIssuesCount={findings.filter((f) => f.severity === 'Critical').length}
-        moduleName="sky_apes_contract"
+        moduleName={projectName.toLowerCase().replace(/[^a-zA-Z0-9_]/g, '_') || 'sky_apes_contract'}
+        projectId={params.projectId}
+        files={generatedFiles}
       />
 
       <EjectModal
