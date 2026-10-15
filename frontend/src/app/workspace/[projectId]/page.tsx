@@ -27,6 +27,8 @@ import { PermissionsPanel } from '../../../components/panels/PermissionsPanel';
 import { LearningPanel } from '../../../components/panels/LearningPanel';
 import { PromptDrawer } from '../../../components/ai/PromptDrawer';
 import { DeployModal } from '../../../components/deploy/DeployModal';
+import { MonacoMoveEditor } from '../../../components/editor/MonacoMoveEditor';
+import { EjectModal } from '../../../components/editor/EjectModal';
 
 import {
   fetchBlocks,
@@ -107,6 +109,9 @@ export default function WorkspacePage({ params }: { params: { projectId: string 
   // Modals
   const [isPromptDrawerOpen, setIsPromptDrawerOpen] = useState(false);
   const [isDeployModalOpen, setIsDeployModalOpen] = useState(false);
+  const [isEjectModalOpen, setIsEjectModalOpen] = useState(false);
+  const [isEjected, setIsEjected] = useState(false);
+  const [canvasViewMode, setCanvasViewMode] = useState<'canvas' | 'monaco'>('canvas');
   const [consoleMsg, setConsoleMsg] = useState('Topology: Ready • Smooth Orthogonal Routing Active');
 
   // Project & Autosave State
@@ -486,6 +491,10 @@ export default function WorkspacePage({ params }: { params: { projectId: string 
               if (projRes.project.name) {
                 setProjectName(projRes.project.name);
               }
+              if (projRes.project.mode === 'code') {
+                setIsEjected(true);
+                setCanvasViewMode('monaco');
+              }
               if (projRes.project.graph?.blocks?.length) {
                 loadGraphIntoCanvas(projRes.project.graph, blocksRes.blocks || []);
                 loaded = true;
@@ -508,6 +517,24 @@ export default function WorkspacePage({ params }: { params: { projectId: string 
     }
     init();
   }, [loadGraphIntoCanvas, params.projectId]);
+
+  // One-way Eject to Monaco Editor confirmation
+  const handleConfirmEject = async (saveSnapshot: boolean) => {
+    setIsEjectModalOpen(false);
+    setIsEjected(true);
+    setCanvasViewMode('monaco');
+    setConsoleMsg('Project ejected to Monaco editor. Visual graph preserved in snapshot.');
+    try {
+      const graph = getGraphObject(nodes, edges);
+      const code = generatedFiles[Object.keys(generatedFiles)[1]] || generatedFiles[Object.keys(generatedFiles)[0]] || '';
+      await updateProject(params.projectId, {
+        mode: 'code',
+        graph: saveSnapshot ? graph : undefined,
+      });
+    } catch (e) {
+      console.warn('Eject save warning:', e);
+    }
+  };
 
   // Connect ports with clean orthogonal smoothstep edge and validation
   const onConnect = useCallback(
@@ -1040,6 +1067,52 @@ export default function WorkspacePage({ params }: { params: { projectId: string 
               <Download size={13} />
               Export PDF Audit
             </button>
+
+            {/* View Mode Toggle when Ejected */}
+            {isEjected && (
+              <div
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  background: 'var(--surface-container-lowest)',
+                  border: '1px solid var(--border-strong)',
+                  borderRadius: '6px',
+                  padding: '2px',
+                  boxShadow: 'var(--shadow-sm)',
+                }}
+              >
+                <button
+                  onClick={() => setCanvasViewMode('monaco')}
+                  style={{
+                    padding: '3px 8px',
+                    borderRadius: '4px',
+                    border: 'none',
+                    background: canvasViewMode === 'monaco' ? 'var(--primary)' : 'transparent',
+                    color: canvasViewMode === 'monaco' ? '#ffffff' : 'var(--text-secondary)',
+                    fontSize: '0.72rem',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                  }}
+                >
+                  ⚡ Monaco Editor
+                </button>
+                <button
+                  onClick={() => setCanvasViewMode('canvas')}
+                  style={{
+                    padding: '3px 8px',
+                    borderRadius: '4px',
+                    border: 'none',
+                    background: canvasViewMode === 'canvas' ? 'var(--primary)' : 'transparent',
+                    color: canvasViewMode === 'canvas' ? '#ffffff' : 'var(--text-secondary)',
+                    fontSize: '0.72rem',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                  }}
+                >
+                  📦 Graph (Read-Only)
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Floating Button when Inspector is Closed */}
@@ -1070,61 +1143,110 @@ export default function WorkspacePage({ params }: { params: { projectId: string 
             </button>
           )}
 
-          <ReactFlow
-            nodes={nodes}
-            edges={edges}
-            onNodesChange={onNodesChange}
-            onEdgesChange={onEdgesChange}
-            onConnect={onConnect}
-            isValidConnection={isValidConnection}
-            onNodeClick={onNodeClick}
-            onNodeDragStop={() => pushHistory(nodes, edges)}
-            onNodesDelete={(deleted) => {
-              const remainingNodes = nodes.filter((n) => !deleted.some((d) => d.id === n.id));
-              const remainingEdges = edges.filter(
-                (e) => !deleted.some((d) => d.id === e.source || d.id === e.target)
-              );
-              const validated = validateNodesWithEdges(remainingNodes, remainingEdges);
-              setNodes(validated);
-              setEdges(remainingEdges);
-              pushHistory(validated, remainingEdges);
-              triggerPipeline(validated, remainingEdges);
-            }}
-            onEdgesDelete={(deleted) => {
-              const remaining = edges.filter((e) => !deleted.some((d) => d.id === e.id));
-              const validated = validateNodesWithEdges(nodes, remaining);
-              setNodes(validated);
-              setEdges(remaining);
-              pushHistory(validated, remaining);
-              triggerPipeline(validated, remaining);
-            }}
-            deleteKeyCode={['Backspace', 'Delete']}
-            nodeTypes={nodeTypes}
-            snapToGrid={gridSnap}
-            snapGrid={[16, 16]}
-            fitView
-          >
-            {/* Luminous Pristine Dot Matrix Background */}
-            <Background color="#cbdbf5" gap={16} size={1.5} />
-            <Controls
-              style={{
-                background: 'var(--surface-container-lowest)',
-                borderColor: 'var(--border-subtle)',
-                boxShadow: 'var(--shadow-md)',
-                borderRadius: '8px',
+          {canvasViewMode === 'monaco' ? (
+            <div style={{ height: '100%', width: '100%', paddingTop: '48px' }}>
+              <MonacoMoveEditor
+                files={generatedFiles}
+                projectName={projectName}
+                onSave={async (updatedFiles) => {
+                  setGeneratedFiles(updatedFiles);
+                  const code =
+                    updatedFiles[Object.keys(updatedFiles).find((k) => k.endsWith('.move')) || ''] ||
+                    updatedFiles[Object.keys(updatedFiles)[0]] ||
+                    '';
+                  if (code && typeof window !== 'undefined') {
+                    localStorage.setItem('scc_latest_code', code);
+                  }
+                  const [auditRes, gasRes] = await Promise.all([
+                    runAudit(code, getGraphObject(nodes, edges)),
+                    runGasAnalysis(code),
+                  ]);
+                  if (auditRes.result) {
+                    setRiskScore(auditRes.result.riskScore);
+                    setRiskBand(auditRes.result.riskBand);
+                    setFindings(auditRes.result.findings || []);
+                  }
+                  if (gasRes.result) {
+                    setGasReport(gasRes.result);
+                  }
+                  await updateProject(params.projectId, { code });
+                  setConsoleMsg('Move code saved & re-verified against Aptos compiler.');
+                }}
+                onRunAudit={async (code) => {
+                  setConsoleMsg('Running AST Security Audit on raw Move code...');
+                  const auditRes = await runAudit(code, getGraphObject(nodes, edges));
+                  if (auditRes.result) {
+                    setRiskScore(auditRes.result.riskScore);
+                    setRiskBand(auditRes.result.riskBand);
+                    setFindings(auditRes.result.findings || []);
+                    setConsoleMsg(`Audit complete: Risk Score ${auditRes.result.riskScore}/100 (${auditRes.result.riskBand})`);
+                  }
+                }}
+                onDeploy={() => setIsDeployModalOpen(true)}
+              />
+            </div>
+          ) : (
+            <ReactFlow
+              nodes={nodes}
+              edges={edges}
+              onNodesChange={isEjected ? undefined : onNodesChange}
+              onEdgesChange={isEjected ? undefined : onEdgesChange}
+              onConnect={isEjected ? undefined : onConnect}
+              isValidConnection={isValidConnection}
+              onNodeClick={onNodeClick}
+              onNodeDragStop={() => pushHistory(nodes, edges)}
+              onNodesDelete={(deleted) => {
+                if (isEjected) return;
+                const remainingNodes = nodes.filter((n) => !deleted.some((d) => d.id === n.id));
+                const remainingEdges = edges.filter(
+                  (e) => !deleted.some((d) => d.id === e.source || d.id === e.target)
+                );
+                const validated = validateNodesWithEdges(remainingNodes, remainingEdges);
+                setNodes(validated);
+                setEdges(remainingEdges);
+                pushHistory(validated, remainingEdges);
+                triggerPipeline(validated, remainingEdges);
               }}
-            />
-            <MiniMap
-              nodeColor="#0f766e"
-              maskColor="rgba(203, 219, 245, 0.4)"
-              style={{
-                background: 'var(--surface-container-lowest)',
-                border: '1px solid var(--border-subtle)',
-                borderRadius: '8px',
-                boxShadow: 'var(--shadow-md)',
+              onEdgesDelete={(deleted) => {
+                if (isEjected) return;
+                const remaining = edges.filter((e) => !deleted.some((d) => d.id === e.id));
+                const validated = validateNodesWithEdges(nodes, remaining);
+                setNodes(validated);
+                setEdges(remaining);
+                pushHistory(validated, remaining);
+                triggerPipeline(validated, remaining);
               }}
-            />
-          </ReactFlow>
+              deleteKeyCode={isEjected ? [] : ['Backspace', 'Delete']}
+              nodeTypes={nodeTypes}
+              snapToGrid={gridSnap}
+              snapGrid={[16, 16]}
+              nodesDraggable={!isEjected}
+              nodesConnectable={!isEjected}
+              elementsSelectable={true}
+              fitView
+            >
+              {/* Luminous Pristine Dot Matrix Background */}
+              <Background color="#cbdbf5" gap={16} size={1.5} />
+              <Controls
+                style={{
+                  background: 'var(--surface-container-lowest)',
+                  borderColor: 'var(--border-subtle)',
+                  boxShadow: 'var(--shadow-md)',
+                  borderRadius: '8px',
+                }}
+              />
+              <MiniMap
+                nodeColor="#0f766e"
+                maskColor="rgba(203, 219, 245, 0.4)"
+                style={{
+                  background: 'var(--surface-container-lowest)',
+                  border: '1px solid var(--border-subtle)',
+                  borderRadius: '8px',
+                  boxShadow: 'var(--shadow-md)',
+                }}
+              />
+            </ReactFlow>
+          )}
 
           {/* Bottom Canvas HUD: Topology, Block Count, Verification */}
           <div
@@ -1298,6 +1420,7 @@ export default function WorkspacePage({ params }: { params: { projectId: string 
                     setSelectedNodeId(bId);
                     setActiveTab('properties');
                   }}
+                  onEjectToEditor={() => setIsEjectModalOpen(true)}
                   graph={getGraphObject(nodes, edges)}
                   onCodeGenerated={(newFiles, newSourceMap) => {
                     setGeneratedFiles(newFiles);
@@ -1355,6 +1478,13 @@ export default function WorkspacePage({ params }: { params: { projectId: string 
         hasCompilePassed={true}
         criticalIssuesCount={findings.filter((f) => f.severity === 'Critical').length}
         moduleName="sky_apes_contract"
+      />
+
+      <EjectModal
+        isOpen={isEjectModalOpen}
+        onClose={() => setIsEjectModalOpen(false)}
+        onConfirmEject={handleConfirmEject}
+        projectName={projectName}
       />
     </div>
   );

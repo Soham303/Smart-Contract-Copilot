@@ -77,7 +77,17 @@ export async function getProject(projectId: string) {
   return res.json();
 }
 
-export async function updateProject(projectId: string, data: { name?: string; mode?: string; graph?: any; network?: string }) {
+export async function updateProject(
+  projectId: string,
+  data: {
+    name?: string;
+    mode?: string;
+    graph?: any;
+    network?: string;
+    code?: string;
+    files?: Record<string, string>;
+  }
+) {
   const res = await fetch(`${API_BASE}/projects/${projectId}`, {
     method: 'PUT',
     headers: authHeaders(),
