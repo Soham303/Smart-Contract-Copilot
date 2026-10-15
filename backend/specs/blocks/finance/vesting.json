@@ -4,7 +4,10 @@
   "title": "Vesting",
   "description": "Gradually releases locked tokens over time with optional cliff schedule.",
   "ports": {
-    "in": [],
+    "in": [
+      { "name": "admin", "type": "AccessGate", "description": "Admin capability to configure vesting" },
+      { "name": "token", "type": "TokenRef", "description": "Token to be vested" }
+    ],
     "out": [
       { "name": "vesting_out", "type": "FinanceRef", "description": "Vested token release reference" }
     ]

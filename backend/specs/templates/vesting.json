@@ -50,10 +50,10 @@
         "toPort": "admin"
       },
       {
-        "from": "b2",
-        "fromPort": "vesting_out",
-        "to": "b3",
-        "toPort": "mint"
+        "from": "b3",
+        "fromPort": "token",
+        "to": "b2",
+        "toPort": "token"
       }
     ]
   }

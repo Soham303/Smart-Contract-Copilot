@@ -5,7 +5,8 @@
   "description": "Holds funds in trust until predefined release conditions are met, with refund timeout.",
   "ports": {
     "in": [
-      { "name": "arbiter", "type": "AccessGate", "description": "Optional third-party arbiter" }
+      { "name": "arbiter", "type": "AccessGate", "description": "Optional third-party arbiter" },
+      { "name": "token", "type": "TokenRef", "description": "Token to be escrowed" }
     ],
     "out": [
       { "name": "escrow_out", "type": "FinanceRef", "description": "Escrow balance reference" }

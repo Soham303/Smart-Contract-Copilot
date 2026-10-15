@@ -23,11 +23,12 @@ def test_generator_for_fungible_token_template():
     files, source_map = target.generate(graph)
     
     assert "Move.toml" in files
-    assert "sources/my_token.move" in files
-    code = files["sources/my_token.move"]
+    mod_name = graph.meta.moduleName
+    assert f"sources/{mod_name}.move" in files
+    code = files[f"sources/{mod_name}.move"]
     
     # Verify standard Move tokens and framework calls are in code
-    assert "module copilot_addr::my_token" in code
+    assert f"module copilot_addr::{mod_name}" in code
     assert "primary_fungible_store::create_primary_store_enabled_fungible_asset" in code
     assert "public entry fun mint" in code
     

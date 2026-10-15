@@ -4,7 +4,10 @@
   "title": "Staking",
   "description": "Stake tokens to earn periodic rewards with configurable lockup periods.",
   "ports": {
-    "in": [],
+    "in": [
+      { "name": "pause", "type": "PauseGate", "description": "Emergency pause gate" },
+      { "name": "token", "type": "TokenRef", "description": "Token to be staked" }
+    ],
     "out": [
       { "name": "staking_pool", "type": "FinanceRef", "description": "Staking pool reference" }
     ]
