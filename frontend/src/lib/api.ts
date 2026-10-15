@@ -211,6 +211,24 @@ export async function generateReport(payload: any) {
   return res.json();
 }
 
+export async function downloadAuditReportPdf(payload: any, filename: string = 'audit_report.pdf') {
+  const res = await fetch(`${API_BASE}/reports/export-pdf`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) throw new Error('Failed to generate PDF report');
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
 // ==================== DEPLOY ====================
 export async function buildDeployPayload(files: Record<string, string>, network: string = 'testnet') {
   const res = await fetch(`${API_BASE}/deploy/payload`, {

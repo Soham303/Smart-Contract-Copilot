@@ -408,26 +408,50 @@ class DatabaseRepository:
         deps.sort(key=lambda x: x.get("deployedAt", datetime.min), reverse=True)
         return deps
 
-    # ==================== AI LOGS ====================
-    def log_ai(self, user_id: Optional[str], prompt: str, graph_result: Dict[str, Any], valid: bool = True, repair_attempts: int = 0, latency_ms: float = 0.0) -> Dict[str, Any]:
-        log_id = _generate_id("ailog_")
-        p_hash = hashlib.sha256(prompt.encode()).hexdigest()
-        log_doc = {
-            "_id": log_id,
-            "userId": user_id,
-            "promptHash": p_hash,
-            "graphResult": graph_result,
-            "valid": valid,
-            "repairAttempts": repair_attempts,
-            "latencyMs": latency_ms,
+    # ==================== REPORTS ====================
+    def save_report(
+        self,
+        report_id: str,
+        project_name: str,
+        audit_data: Dict[str, Any],
+        gas_data: Dict[str, Any],
+        permissions_data: Dict[str, Any],
+        html: str,
+        pdf_bytes: bytes,
+    ) -> Dict[str, Any]:
+        doc = {
+            "_id": report_id,
+            "id": report_id,
+            "projectName": project_name,
+            "audit": audit_data,
+            "gas": gas_data,
+            "permissions": permissions_data,
+            "html": html,
+            "pdfBytes": pdf_bytes,
             "createdAt": datetime.utcnow()
         }
         if self.is_mongo_connected:
             try:
-                extensions.db.ai_logs.insert_one(dict(log_doc))
+                extensions.db.reports.insert_one(dict(doc))
             except Exception:
                 pass
-        self._memory_db["ai_logs"][log_id] = log_doc
-        return log_doc
+        self._memory_db["reports"][report_id] = doc
+        return doc
+
+    def get_report(self, report_id: str) -> Optional[Dict[str, Any]]:
+        if self.is_mongo_connected:
+            try:
+                doc = extensions.db.reports.find_one({"_id": report_id})
+                if doc:
+                    doc["id"] = str(doc["_id"])
+                    return doc
+            except Exception:
+                pass
+        doc = self._memory_db["reports"].get(report_id)
+        if doc:
+            res = dict(doc)
+            res["id"] = str(res["_id"])
+            return res
+        return None
 
 db_repo = DatabaseRepository()

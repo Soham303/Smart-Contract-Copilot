@@ -39,6 +39,7 @@ import {
   runGasAnalysis,
   runPermissions,
   generateReport,
+  downloadAuditReportPdf,
   getProject,
   updateProject,
 } from '../../../lib/api';
@@ -625,20 +626,15 @@ export default function WorkspacePage({ params }: { params: { projectId: string 
 
   const handleExportReport = async () => {
     try {
-      setConsoleMsg('Rendering WeasyPrint PDF Audit Report...');
+      setConsoleMsg('Generating and exporting official PDF Audit Report...');
       const payload = {
-        projectName: 'SkyApes_Token_Vesting',
+        projectName,
         audit: { riskScore, riskBand, findings },
         gas: gasReport,
         permissions: permissionsData,
       };
-      const res = await generateReport(payload);
-      if (res.html) {
-        const blob = new Blob([res.html], { type: 'text/html' });
-        const url = URL.createObjectURL(blob);
-        window.open(url, '_blank');
-        setConsoleMsg('Audit Report exported successfully!');
-      }
+      await downloadAuditReportPdf(payload, `${projectName}_Audit_Report.pdf`);
+      setConsoleMsg('Audit Report PDF exported successfully!');
     } catch (e) {
       console.error(e);
       setConsoleMsg('Report export failed');
