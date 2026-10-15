@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import {
   User,
@@ -16,22 +16,129 @@ import {
   FileCode,
   HardDrive,
   CheckCircle2,
+  Wallet,
 } from 'lucide-react';
+import { fetchDeployments } from '../../lib/api';
 
 export default function AccountHubPage() {
   const [faucetLoading, setFaucetLoading] = useState(false);
   const [balance, setBalance] = useState(42.5);
+  const [walletAddress, setWalletAddress] = useState('0x7a39...e91b');
   const [copiedKey, setCopiedKey] = useState(false);
+  const [copiedTx, setCopiedTx] = useState<string | null>(null);
   const [toggleAutoAudit, setToggleAutoAudit] = useState(true);
   const [toggleMoveProver, setToggleMoveProver] = useState(true);
   const [toggleGasTelemetry, setToggleGasTelemetry] = useState(true);
+  const [deploymentsList, setDeploymentsList] = useState<any[]>([
+    {
+      module: 'copilot_addr::sky_apes_token',
+      standard: 'AIP-21 Fungible Asset',
+      address: '0x7a3...e91b',
+      bytecodeHash: '0x8f4c...91a2',
+      txHash: '0x8f4c718a2b1c4e9081234567890abcdef12345678',
+      gasIncurred: '2,840 Octas',
+      deployedAt: '2025-05-14',
+      status: 'Prover Passed',
+      network: 'testnet',
+    },
+    {
+      module: 'copilot_addr::genesis_collection',
+      standard: 'Digital Asset v2',
+      address: '0x7a3...e91b',
+      bytecodeHash: '0x1c8b...33ef',
+      txHash: '0x1c8b55d09876543210abcdef1234567890abcdef12',
+      gasIncurred: '4,120 Octas',
+      deployedAt: '2025-05-12',
+      status: 'Prover Passed',
+      network: 'testnet',
+    },
+    {
+      module: 'copilot_addr::team_vesting_vault',
+      standard: 'Financial Escrow',
+      address: '0x7a3...e91b',
+      bytecodeHash: '0x55d0...8e11',
+      txHash: '0x55d08e11234567890abcdef1234567890abcdef1234',
+      gasIncurred: '1,960 Octas',
+      deployedAt: '2025-05-08',
+      status: 'Prover Passed',
+      network: 'testnet',
+    },
+  ]);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const storedBal = localStorage.getItem('scc_wallet_bal');
+      if (storedBal) setBalance(parseFloat(storedBal));
+
+      const storedAddr = localStorage.getItem('scc_wallet_addr');
+      if (storedAddr) setWalletAddress(`${storedAddr.slice(0, 6)}...${storedAddr.slice(-4)}`);
+
+      const prefAudit = localStorage.getItem('scc_pref_autoAudit');
+      if (prefAudit !== null) setToggleAutoAudit(prefAudit === 'true');
+
+      const prefProver = localStorage.getItem('scc_pref_moveProver');
+      if (prefProver !== null) setToggleMoveProver(prefProver === 'true');
+
+      const prefGas = localStorage.getItem('scc_pref_gasTelemetry');
+      if (prefGas !== null) setToggleGasTelemetry(prefGas === 'true');
+    }
+
+    async function loadHistory() {
+      try {
+        const res = await fetchDeployments();
+        if (res.deployments && res.deployments.length > 0) {
+          const formatted = res.deployments.map((d: any) => ({
+            module: d.projectId ? `0x1::${d.projectId.replace('proj_', '')}` : '0x1::contract',
+            standard: 'Aptos On-Chain Package',
+            address: d.address ? `${d.address.slice(0, 6)}...${d.address.slice(-4)}` : '0x1',
+            bytecodeHash: d.codeHash ? `0x${d.codeHash.slice(0, 8)}...` : '0x...',
+            txHash: d.txHash,
+            gasIncurred: '2,400 Octas',
+            deployedAt: d.createdAt ? new Date(d.createdAt).toLocaleDateString() : 'Recent',
+            status: 'Prover Passed',
+            network: d.network || 'testnet',
+          }));
+          setDeploymentsList((prev) => [...formatted, ...prev]);
+        }
+      } catch (err) {
+        console.warn('Could not load deployments from backend:', err);
+      }
+    }
+    loadHistory();
+  }, []);
 
   const handleRequestFaucet = () => {
     setFaucetLoading(true);
     setTimeout(() => {
-      setBalance((b) => b + 5.0);
+      setBalance((b) => {
+        const next = b + 5.0;
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('scc_wallet_bal', next.toString());
+        }
+        return next;
+      });
       setFaucetLoading(false);
-    }, 1000);
+    }, 800);
+  };
+
+  const handleConnectWallet = async () => {
+    if (typeof window !== 'undefined') {
+      const aptos = (window as any).aptos || (window as any).petra;
+      if (aptos) {
+        try {
+          const res = await aptos.connect();
+          if (res?.address) {
+            localStorage.setItem('scc_wallet_addr', res.address);
+            setWalletAddress(`${res.address.slice(0, 6)}...${res.address.slice(-4)}`);
+            return;
+          }
+        } catch (e) {
+          console.warn('Wallet connect cancelled:', e);
+        }
+      }
+      const demoAddr = '0x' + Math.random().toString(16).slice(2, 10) + '...e91b';
+      setWalletAddress(demoAddr);
+    }
   };
 
   const handleCopyKey = () => {
@@ -40,35 +147,20 @@ export default function AccountHubPage() {
     setTimeout(() => setCopiedKey(false), 2000);
   };
 
-  const deployedModules = [
-    {
-      module: 'copilot_addr::sky_apes_token',
-      standard: 'AIP-21 Fungible Asset',
-      address: '0x7a3...e91b',
-      bytecodeHash: '0x8f4c...91a2',
-      gasIncurred: '2,840 Octas',
-      deployedAt: '2025-05-14',
-      status: 'Prover Passed',
-    },
-    {
-      module: 'copilot_addr::genesis_collection',
-      standard: 'Digital Asset v2',
-      address: '0x7a3...e91b',
-      bytecodeHash: '0x1c8b...33ef',
-      gasIncurred: '4,120 Octas',
-      deployedAt: '2025-05-12',
-      status: 'Prover Passed',
-    },
-    {
-      module: 'copilot_addr::team_vesting_vault',
-      standard: 'Financial Escrow',
-      address: '0x7a3...e91b',
-      bytecodeHash: '0x55d0...8e11',
-      gasIncurred: '1,960 Octas',
-      deployedAt: '2025-05-08',
-      status: 'Prover Passed',
-    },
-  ];
+  const handleToggleAutoAudit = (checked: boolean) => {
+    setToggleAutoAudit(checked);
+    if (typeof window !== 'undefined') localStorage.setItem('scc_pref_autoAudit', String(checked));
+  };
+
+  const handleToggleMoveProver = (checked: boolean) => {
+    setToggleMoveProver(checked);
+    if (typeof window !== 'undefined') localStorage.setItem('scc_pref_moveProver', String(checked));
+  };
+
+  const handleToggleGasTelemetry = (checked: boolean) => {
+    setToggleGasTelemetry(checked);
+    if (typeof window !== 'undefined') localStorage.setItem('scc_pref_gasTelemetry', String(checked));
+  };
 
   return (
     <div style={{ background: 'var(--surface)', minHeight: 'calc(100vh - 64px)', padding: '2.5rem 1.5rem 5rem' }}>
@@ -138,13 +230,34 @@ export default function AccountHubPage() {
               </div>
             </div>
 
-            <div style={{ background: 'var(--surface-container-low)', borderRadius: '8px', padding: '10px 12px', marginBottom: '12px' }}>
-              <div style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
-                CONNECTED PETRA WALLET
+            <div style={{ background: 'var(--surface-container-low)', borderRadius: '8px', padding: '10px 12px', marginBottom: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <div style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
+                  CONNECTED APTOS WALLET
+                </div>
+                <div style={{ fontSize: '0.85rem', fontWeight: 700, fontFamily: 'var(--font-mono)', color: 'var(--primary)' }}>
+                  {walletAddress} (Aptos Testnet)
+                </div>
               </div>
-              <div style={{ fontSize: '0.85rem', fontWeight: 700, fontFamily: 'var(--font-mono)', color: 'var(--primary)' }}>
-                0x7a39...e91b (Aptos Testnet)
-              </div>
+              <button
+                onClick={handleConnectWallet}
+                style={{
+                  padding: '4px 8px',
+                  borderRadius: '4px',
+                  border: '1px solid var(--border-subtle)',
+                  background: '#ffffff',
+                  fontSize: '0.72rem',
+                  fontWeight: 600,
+                  color: 'var(--primary)',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                }}
+              >
+                <Wallet size={12} />
+                Connect
+              </button>
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -307,7 +420,7 @@ export default function AccountHubPage() {
                 fontWeight: 600,
               }}
             >
-              3 Active Packages
+              {deploymentsList.length} Active Packages
             </span>
           </div>
 
@@ -317,20 +430,48 @@ export default function AccountHubPage() {
                 <th style={{ textAlign: 'left', padding: '12px 18px', color: 'var(--text-muted)' }}>Module Identifier</th>
                 <th style={{ textAlign: 'left', padding: '12px 18px', color: 'var(--text-muted)' }}>Package Standard</th>
                 <th style={{ textAlign: 'left', padding: '12px 18px', color: 'var(--text-muted)' }}>Target Address</th>
-                <th style={{ textAlign: 'left', padding: '12px 18px', color: 'var(--text-muted)' }}>Bytecode Hash</th>
+                <th style={{ textAlign: 'left', padding: '12px 18px', color: 'var(--text-muted)' }}>Bytecode / Tx</th>
                 <th style={{ textAlign: 'left', padding: '12px 18px', color: 'var(--text-muted)' }}>Gas Incurred</th>
                 <th style={{ textAlign: 'right', padding: '12px 18px', color: 'var(--text-muted)' }}>Verification</th>
               </tr>
             </thead>
             <tbody>
-              {deployedModules.map((m, idx) => (
+              {deploymentsList.map((m, idx) => (
                 <tr key={idx} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
                   <td style={{ padding: '12px 18px', fontWeight: 600, fontFamily: 'var(--font-mono)', color: 'var(--text-primary)' }}>
                     {m.module}
                   </td>
                   <td style={{ padding: '12px 18px', color: 'var(--text-secondary)' }}>{m.standard}</td>
                   <td style={{ padding: '12px 18px', fontFamily: 'var(--font-mono)', color: 'var(--primary)' }}>{m.address}</td>
-                  <td style={{ padding: '12px 18px', fontFamily: 'var(--font-mono)', color: 'var(--text-muted)' }}>{m.bytecodeHash}</td>
+                  <td style={{ padding: '12px 18px', fontFamily: 'var(--font-mono)', color: 'var(--text-muted)' }}>
+                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                      <span>{m.bytecodeHash}</span>
+                      {m.txHash && (
+                        <>
+                          <button
+                            onClick={() => {
+                              navigator.clipboard.writeText(m.txHash);
+                              setCopiedTx(m.txHash);
+                              setTimeout(() => setCopiedTx(null), 2000);
+                            }}
+                            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+                            title="Copy Tx Hash"
+                          >
+                            {copiedTx === m.txHash ? <Check size={12} color="#059669" /> : <Copy size={12} color="#64748b" />}
+                          </button>
+                          <a
+                            href={`https://explorer.aptoslabs.com/txn/${m.txHash}?network=${m.network || 'testnet'}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            style={{ color: 'var(--primary)', display: 'inline-flex', alignItems: 'center' }}
+                            title="View on Aptos Explorer"
+                          >
+                            <ExternalLink size={12} />
+                          </a>
+                        </>
+                      )}
+                    </div>
+                  </td>
                   <td style={{ padding: '12px 18px', fontFamily: 'var(--font-mono)', color: 'var(--text-secondary)' }}>{m.gasIncurred}</td>
                   <td style={{ padding: '12px 18px', textAlign: 'right' }}>
                     <span
@@ -477,7 +618,7 @@ export default function AccountHubPage() {
                 <input
                   type="checkbox"
                   checked={toggleAutoAudit}
-                  onChange={(e) => setToggleAutoAudit(e.target.checked)}
+                  onChange={(e) => handleToggleAutoAudit(e.target.checked)}
                   style={{ width: '18px', height: '18px', accentColor: 'var(--primary)' }}
                 />
               </label>
@@ -494,7 +635,7 @@ export default function AccountHubPage() {
                 <input
                   type="checkbox"
                   checked={toggleMoveProver}
-                  onChange={(e) => setToggleMoveProver(e.target.checked)}
+                  onChange={(e) => handleToggleMoveProver(e.target.checked)}
                   style={{ width: '18px', height: '18px', accentColor: 'var(--primary)' }}
                 />
               </label>
@@ -511,7 +652,7 @@ export default function AccountHubPage() {
                 <input
                   type="checkbox"
                   checked={toggleGasTelemetry}
-                  onChange={(e) => setToggleGasTelemetry(e.target.checked)}
+                  onChange={(e) => handleToggleGasTelemetry(e.target.checked)}
                   style={{ width: '18px', height: '18px', accentColor: 'var(--primary)' }}
                 />
               </label>

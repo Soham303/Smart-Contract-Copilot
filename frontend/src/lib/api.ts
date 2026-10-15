@@ -247,3 +247,12 @@ export async function recordDeployment(data: { projectId: string; network: strin
   });
   return res.json();
 }
+
+export async function fetchDeployments(projectId?: string) {
+  const url = projectId ? `${API_BASE}/deploy/history?projectId=${encodeURIComponent(projectId)}` : `${API_BASE}/deploy/history`;
+  const res = await fetch(url, {
+    headers: authHeaders(),
+  });
+  return res.json();
+}
+

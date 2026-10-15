@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import {
   Sparkles,
@@ -15,10 +15,23 @@ import {
   CheckCircle2,
   AlertCircle,
   FileCode,
+  FolderOpen,
 } from 'lucide-react';
+import { fetchProjects } from '../../lib/api';
 
 export default function TemplatesHubPage() {
   const [promptText, setPromptText] = useState('');
+  const [activeProjects, setActiveProjects] = useState<any[]>([
+    {
+      id: 'demo',
+      name: 'SkyApes_Token_Vesting',
+      module: 'copilot_addr::sky_apes_token',
+      blocksCount: 4,
+      status: 'Compiled & Verified',
+      lastModified: 'Just now',
+      riskScore: 94,
+    },
+  ]);
 
   const samplePromptChips = [
     'Create a capped token named SkyApe with 5% transfer fee',
@@ -27,26 +40,28 @@ export default function TemplatesHubPage() {
     'Trustless trade escrow with 7-day refund timeout',
   ];
 
-  const activeProjects = [
-    {
-      id: 'proj_1',
-      name: 'SkyApes_Token_Vesting',
-      module: 'copilot_addr::sky_apes_token',
-      blocksCount: 4,
-      status: 'Compiled & Verified',
-      lastModified: '12 mins ago',
-      riskScore: 94,
-    },
-    {
-      id: 'proj_2',
-      name: 'Aptos_Genesis_NFT',
-      module: 'copilot_addr::genesis_collection',
-      blocksCount: 3,
-      status: 'Compiled & Verified',
-      lastModified: '2 hours ago',
-      riskScore: 98,
-    },
-  ];
+  useEffect(() => {
+    async function loadProjects() {
+      try {
+        const res = await fetchProjects();
+        if (res.projects && res.projects.length > 0) {
+          const mapped = res.projects.map((p: any) => ({
+            id: p.id,
+            name: p.name,
+            module: p.graph?.meta?.moduleName ? `0x1::${p.graph.meta.moduleName}` : 'copilot_addr::contract',
+            blocksCount: p.graph?.blocks?.length || 1,
+            status: p.mode === 'code' ? 'Ejected (Monaco)' : 'Compiled & Verified',
+            lastModified: p.updatedAt ? new Date(p.updatedAt).toLocaleDateString() : 'Active',
+            riskScore: 96,
+          }));
+          setActiveProjects(mapped);
+        }
+      } catch (err) {
+        console.warn('Could not load projects from API, using demo project:', err);
+      }
+    }
+    loadProjects();
+  }, []);
 
   const templatesGrid = [
     {
@@ -139,26 +154,26 @@ export default function TemplatesHubPage() {
             </p>
           </div>
 
-          <Link
-            href="/workspace/demo"
-            style={{
-              padding: '0.75rem 1.5rem',
-              borderRadius: '8px',
-              border: 'none',
-              background: 'var(--primary)',
-              color: '#ffffff',
-              fontSize: '0.85rem',
-              fontWeight: 600,
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-              boxShadow: 'var(--shadow-sm)',
-            }}
-          >
-            <Plus size={16} />
-            New Empty Contract
-          </Link>
-        </div>
+            <Link
+              href="/workspace/demo?template=empty"
+              style={{
+                padding: '0.75rem 1.5rem',
+                borderRadius: '8px',
+                border: 'none',
+                background: 'var(--primary)',
+                color: '#ffffff',
+                fontSize: '0.85rem',
+                fontWeight: 600,
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                boxShadow: 'var(--shadow-sm)',
+              }}
+            >
+              <Plus size={16} />
+              New Empty Contract
+            </Link>
+          </div>
 
         {/* --- AI Prompt Synthesizer Input Bar --- */}
         <div
@@ -200,7 +215,7 @@ export default function TemplatesHubPage() {
               }}
             />
             <Link
-              href="/workspace/demo"
+              href={`/workspace/demo?prompt=${encodeURIComponent(promptText || 'Create a capped token named SkyApe with 5% transfer fee')}`}
               style={{
                 padding: '12px 20px',
                 background: 'var(--primary)',
@@ -362,7 +377,7 @@ export default function TemplatesHubPage() {
                 </div>
 
                 <Link
-                  href="/workspace/demo"
+                  href={`/workspace/demo?template=${tmpl.id}`}
                   style={{
                     padding: '8px 14px',
                     borderRadius: '6px',

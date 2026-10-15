@@ -42,6 +42,7 @@ import {
   downloadAuditReportPdf,
   getProject,
   updateProject,
+  promptToGraph,
 } from '../../../lib/api';
 
 import { BlockSpec } from '../../../types/blocks';
@@ -507,9 +508,42 @@ export default function WorkspacePage({ params }: { params: { projectId: string 
         }
 
         if (!loaded) {
-          const defaultTmpl = templatesRes.templates?.find((t: any) => t.id === 'template_fungible_token') || templatesRes.templates?.[0];
-          if (defaultTmpl?.graph) {
-            loadGraphIntoCanvas(defaultTmpl.graph, blocksRes.blocks || []);
+          const searchParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
+          const templateParam = searchParams?.get('template');
+          const promptParam = searchParams?.get('prompt');
+
+          if (promptParam) {
+            try {
+              setConsoleMsg(`Synthesizing architecture for: "${promptParam.slice(0, 40)}..."`);
+              const aiRes = await promptToGraph(promptParam);
+              if (aiRes.graph?.blocks?.length) {
+                loadGraphIntoCanvas(aiRes.graph, blocksRes.blocks || []);
+                loaded = true;
+              }
+            } catch (err) {
+              console.warn('AI prompt synthesis error on init:', err);
+            }
+          }
+
+          if (!loaded && templateParam) {
+            if (templateParam === 'empty') {
+              setNodes([]);
+              setEdges([]);
+              loaded = true;
+            } else {
+              const matchedTmpl = templatesRes.templates?.find((t: any) => t.id === templateParam);
+              if (matchedTmpl?.graph) {
+                loadGraphIntoCanvas(matchedTmpl.graph, blocksRes.blocks || []);
+                loaded = true;
+              }
+            }
+          }
+
+          if (!loaded) {
+            const defaultTmpl = templatesRes.templates?.find((t: any) => t.id === 'template_fungible_token') || templatesRes.templates?.[0];
+            if (defaultTmpl?.graph) {
+              loadGraphIntoCanvas(defaultTmpl.graph, blocksRes.blocks || []);
+            }
           }
         }
       } catch (e) {
