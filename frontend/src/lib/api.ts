@@ -123,6 +123,19 @@ export async function generateCode(graph: any) {
   return res.json();
 }
 
+export async function generateAiCode(graph: any, prompt?: string, apiKey?: string, model?: string) {
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  if (apiKey) {
+    headers['X-AI-API-Key'] = apiKey;
+  }
+  const res = await fetch(`${API_BASE}/ai/generate-code`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({ graph, prompt, apiKey, model }),
+  });
+  return res.json();
+}
+
 // ==================== JOBS ====================
 export async function getJobStatus(jobId: string) {
   const res = await fetch(`${API_BASE}/jobs/${jobId}`);

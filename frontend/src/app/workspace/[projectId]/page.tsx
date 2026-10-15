@@ -1293,6 +1293,20 @@ export default function WorkspacePage({ params }: { params: { projectId: string 
                 <LiveCodePanel
                   files={generatedFiles}
                   sourceMap={sourceMap}
+                  selectedBlockId={selectedNodeId}
+                  onSelectBlockId={(bId) => {
+                    setSelectedNodeId(bId);
+                    setActiveTab('properties');
+                  }}
+                  graph={getGraphObject(nodes, edges)}
+                  onCodeGenerated={(newFiles, newSourceMap) => {
+                    setGeneratedFiles(newFiles);
+                    if (newSourceMap) setSourceMap(newSourceMap);
+                    const code = newFiles[Object.keys(newFiles)[1]] || newFiles[Object.keys(newFiles)[0]] || '';
+                    if (code && typeof window !== 'undefined') {
+                      localStorage.setItem('scc_latest_code', code);
+                    }
+                  }}
                 />
               )}
               {activeTab === 'audit' && (
