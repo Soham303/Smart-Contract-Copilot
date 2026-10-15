@@ -337,7 +337,51 @@ class PromptToGraphService:
         return graph, diff
 
     def _invoke_llm_api(self, prompt: str, api_key: str):
-        # Implementation for optional external Gemini / OpenAI endpoint
+        import urllib.request
+        import urllib.error
+
+        is_gemini = "AIza" in api_key or os.getenv("GEMINI_API_KEY") == api_key
+        if not is_gemini:
+            return None, None
+
+        sys_msg = (
+            "You are an Aptos Move smart contract architecture AI. "
+            "Convert the user's prompt into a valid Contract Graph JSON with 'schemaVersion': '1.0', 'target': 'aptos-move', "
+            "'meta': {'name': str, 'moduleName': str, 'version': '1.0.0'}, 'blocks': [{'id': str, 'type': str, 'props': dict, 'position': {'x': int, 'y': int}}], "
+            "and 'edges': [{'from': str, 'fromPort': str, 'to': str, 'toPort': str}]. "
+            "Valid block types include: 'token.fungible', 'token.mint_burn', 'token.freeze', 'token.transfer_fee', 'nft.collection', 'nft.whitelist', 'access.single_owner', 'finance.linear_vesting'. "
+            "Return JSON only."
+        )
+
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key}"
+        req_data = {
+            "contents": [
+                {"parts": [{"text": f"{sys_msg}\n\nUser Prompt: {prompt}"}]}
+            ],
+            "generationConfig": {"temperature": 0.2, "responseMimeType": "application/json"}
+        }
+        try:
+            req = urllib.request.Request(
+                url,
+                data=json.dumps(req_data).encode("utf-8"),
+                headers={"Content-Type": "application/json"}
+            )
+            with urllib.request.urlopen(req, timeout=15) as resp:
+                data = json.loads(resp.read().decode("utf-8"))
+                text = data["candidates"][0]["content"]["parts"][0]["text"]
+                graph = json.loads(text)
+                if "blocks" in graph and "edges" in graph:
+                    diff = {
+                        "prompt": prompt,
+                        "totalBlocks": len(graph.get("blocks", [])),
+                        "edgesCount": len(graph.get("edges", [])),
+                        "addedBlocks": [b.get("type", "") for b in graph.get("blocks", [])],
+                        "explanation": f"Autonomously synthesized {len(graph.get('blocks', []))} interconnected blocks via Gemini 1.5 Flash (Free Tier)"
+                    }
+                    return graph, diff
+        except Exception as e:
+            print(f"[PromptToGraph] Gemini API call error: {e}, using local semantic synthesizer")
+
         return None, None
 
 ai_prompt_service = PromptToGraphService()

@@ -53,18 +53,12 @@ class AiCodeGeneratorService:
         model_preference: Optional[str]
     ) -> Optional[Dict[str, Any]]:
         is_gemini = "AIza" in api_key or (model_preference and "gemini" in model_preference.lower()) or os.getenv("GEMINI_API_KEY") == api_key
-        
-        system_instruction = (
-            "You are an expert Aptos Move 2.0 compiler and smart contract security auditor. "
-            "Given the user's Contract Graph JSON, generate a production-ready Aptos Move package with Move.toml and "
-            "sources/<module>.move. Ensure strict adherence to Move 2.0 idioms, explicit acquires annotations, and "
-            "correct resource capability patterns. Return JSON with 'files': {'Move.toml': '...', 'sources/contract.move': '...'} "
-            "and 'reasoning': ['step 1', 'step 2']."
-        )
-        user_content = f"Contract Graph:\n{json.dumps(graph_dict, indent=2)}\n\nUser instructions: {user_prompt or 'Generate verified Move 2.0 contract'}"
+        is_groq = api_key.startswith("gsk_") or (model_preference and "groq" in model_preference.lower()) or os.getenv("GROQ_API_KEY") == api_key
 
         if is_gemini:
-            url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key={api_key}"
+            # Gemini 1.5 Flash has a generous 100% FREE tier (15 RPM, 1500 req/day)
+            gemini_model = model_preference if model_preference and "gemini" in model_preference else "gemini-1.5-flash"
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/{gemini_model}:generateContent?key={api_key}"
             req_data = {
                 "contents": [
                     {"parts": [{"text": f"{system_instruction}\n\n{user_content}"}]}
@@ -81,21 +75,56 @@ class AiCodeGeneratorService:
                 text = data["candidates"][0]["content"]["parts"][0]["text"]
                 parsed = json.loads(text)
                 files = parsed.get("files", {})
-                reasoning = parsed.get("reasoning", ["Generated via Gemini 1.5 Pro"])
+                reasoning = parsed.get("reasoning", ["Synthesized via Google Gemini 1.5 Flash (Free Tier)"])
                 graph = ContractGraph(**graph_dict)
                 _, source_map = self.default_target.generate(graph)
                 return {
                     "files": files,
                     "sourceMap": source_map.to_dict(),
                     "aiReasoning": reasoning,
-                    "model": "Gemini 1.5 Pro",
+                    "model": f"Google {gemini_model.title()}",
+                    "verified": True
+                }
+        elif is_groq:
+            # Groq Cloud 100% Free Tier (Llama 3.3 70B)
+            url = "https://api.groq.com/openai/v1/chat/completions"
+            req_data = {
+                "model": "llama-3.3-70b-versatile",
+                "messages": [
+                    {"role": "system", "content": system_instruction},
+                    {"role": "user", "content": user_content}
+                ],
+                "temperature": 0.2,
+                "response_format": {"type": "json_object"}
+            }
+            req = urllib.request.Request(
+                url,
+                data=json.dumps(req_data).encode("utf-8"),
+                headers={
+                    "Content-Type": "application/json",
+                    "Authorization": f"Bearer {api_key}"
+                }
+            )
+            with urllib.request.urlopen(req, timeout=30) as resp:
+                data = json.loads(resp.read().decode("utf-8"))
+                content_str = data["choices"][0]["message"]["content"]
+                parsed = json.loads(content_str)
+                files = parsed.get("files", {})
+                reasoning = parsed.get("reasoning", ["Synthesized via Groq Llama-3.3 70B (Free Tier)"])
+                graph = ContractGraph(**graph_dict)
+                _, source_map = self.default_target.generate(graph)
+                return {
+                    "files": files,
+                    "sourceMap": source_map.to_dict(),
+                    "aiReasoning": reasoning,
+                    "model": "Groq Llama-3.3-70B",
                     "verified": True
                 }
         else:
             # OpenAI compatible endpoint
             url = "https://api.openai.com/v1/chat/completions"
             req_data = {
-                "model": "gpt-4o",
+                "model": "gpt-4o-mini",
                 "messages": [
                     {"role": "system", "content": system_instruction},
                     {"role": "user", "content": user_content}
