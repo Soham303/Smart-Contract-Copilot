@@ -128,3 +128,18 @@ button {
   background-color: var(--security-emerald);
   animation: pulseGreen 2s infinite ease-in-out;
 }
+
+/* React Flow Port Handles & Validation Feedback */
+.react-flow__handle {
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.react-flow__handle:hover {
+  transform: scale(1.35);
+  box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.35) !important;
+}
+.react-flow__handle.valid {
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.5) !important;
+}
+.react-flow__handle.connectingto {
+  transform: scale(1.35);
+}

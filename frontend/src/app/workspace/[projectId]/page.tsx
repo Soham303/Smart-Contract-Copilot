@@ -60,6 +60,9 @@ import {
   PanelRightClose,
   PanelRightOpen,
   X,
+  Undo2,
+  Redo2,
+  AlertTriangle,
 } from 'lucide-react';
 
 interface BlockNodeData {
@@ -114,6 +117,63 @@ export default function WorkspacePage({ params }: { params: { projectId: string 
   // React Flow Nodes & Edges
   const [nodes, setNodes, onNodesChange] = useNodesState<Node<BlockNodeData>>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
+
+  // Undo / Redo History Stack (up to 50 operations)
+  const historyRef = React.useRef<{ nodes: Node<BlockNodeData>[]; edges: Edge[] }[]>([]);
+  const historyIndexRef = React.useRef<number>(-1);
+  const [canUndo, setCanUndo] = useState<boolean>(false);
+  const [canRedo, setCanRedo] = useState<boolean>(false);
+
+  // Validate Block Nodes against their Spec and Connected Edges
+  const validateNodesWithEdges = useCallback(
+    (currentNodes: Node<BlockNodeData>[], currentEdges: Edge[]): Node<BlockNodeData>[] => {
+      return currentNodes.map((node) => {
+        const spec = node.data?.spec;
+        let status: 'valid' | 'warning' | 'error' = 'valid';
+        let statusMessage: string | undefined = undefined;
+
+        // Check required input ports
+        if (spec?.ports?.in && spec.ports.in.length > 0) {
+          for (const p of spec.ports.in) {
+            if (p.required) {
+              const hasInEdge = currentEdges.some(
+                (e) => e.target === node.id && (e.targetHandle === p.name || !e.targetHandle)
+              );
+              if (!hasInEdge) {
+                status = 'warning';
+                statusMessage = `Required port '${p.name}' is disconnected`;
+                break;
+              }
+            }
+          }
+        }
+
+        // Check required props if still valid
+        if (status === 'valid' && spec?.props) {
+          for (const [key, propDef] of Object.entries(spec.props as Record<string, any>)) {
+            if (propDef.required) {
+              const val = node.data?.props?.[key];
+              if (val === undefined || val === null || val === '') {
+                status = 'warning';
+                statusMessage = `Required property '${key}' is missing`;
+                break;
+              }
+            }
+          }
+        }
+
+        return {
+          ...node,
+          data: {
+            ...node.data,
+            status,
+            statusMessage,
+          },
+        };
+      });
+    },
+    []
+  );
 
   // Node types registration
   const nodeTypes = useMemo(() => ({ blockNode: BlockNode }), []);
@@ -206,7 +266,133 @@ export default function WorkspacePage({ params }: { params: { projectId: string 
       console.error('Pipeline check error:', e);
       setConsoleMsg('Pipeline telemetry error: check connections');
     }
-  }, [getGraphObject]);
+  }, [getGraphObject, scheduleAutosave]);
+
+  // History Push Helper
+  const pushHistory = useCallback((newNodes: Node<BlockNodeData>[], newEdges: Edge[]) => {
+    const nextHistory = historyRef.current.slice(0, historyIndexRef.current + 1);
+    nextHistory.push({
+      nodes: JSON.parse(JSON.stringify(newNodes)),
+      edges: JSON.parse(JSON.stringify(newEdges)),
+    });
+    if (nextHistory.length > 50) {
+      nextHistory.shift();
+    }
+    historyRef.current = nextHistory;
+    historyIndexRef.current = nextHistory.length - 1;
+    setCanUndo(historyIndexRef.current > 0);
+    setCanRedo(false);
+  }, []);
+
+  // History Undo
+  const handleUndo = useCallback(() => {
+    if (historyIndexRef.current > 0) {
+      historyIndexRef.current -= 1;
+      const prev = historyRef.current[historyIndexRef.current];
+      setNodes(prev.nodes);
+      setEdges(prev.edges);
+      setCanUndo(historyIndexRef.current > 0);
+      setCanRedo(historyIndexRef.current < historyRef.current.length - 1);
+      triggerPipeline(prev.nodes, prev.edges);
+      setConsoleMsg(`Undo applied (${historyIndexRef.current + 1}/${historyRef.current.length} states)`);
+    }
+  }, [setNodes, setEdges, triggerPipeline]);
+
+  // History Redo
+  const handleRedo = useCallback(() => {
+    if (historyIndexRef.current < historyRef.current.length - 1) {
+      historyIndexRef.current += 1;
+      const next = historyRef.current[historyIndexRef.current];
+      setNodes(next.nodes);
+      setEdges(next.edges);
+      setCanUndo(true);
+      setCanRedo(historyIndexRef.current < historyRef.current.length - 1);
+      triggerPipeline(next.nodes, next.edges);
+      setConsoleMsg(`Redo applied (${historyIndexRef.current + 1}/${historyRef.current.length} states)`);
+    }
+  }, [setNodes, setEdges, triggerPipeline]);
+
+  // Keyboard Shortcuts for Undo (Ctrl+Z) and Redo (Ctrl+Y / Ctrl+Shift+Z)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const activeEl = document.activeElement;
+      if (
+        activeEl &&
+        (activeEl.tagName === 'INPUT' ||
+          activeEl.tagName === 'TEXTAREA' ||
+          (activeEl as HTMLElement).isContentEditable)
+      ) {
+        return;
+      }
+
+      if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key.toLowerCase() === 'z') {
+        e.preventDefault();
+        handleUndo();
+      } else if (
+        ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'y') ||
+        ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === 'z')
+      ) {
+        e.preventDefault();
+        handleRedo();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [handleUndo, handleRedo]);
+
+  // Typed Port Connection Validation
+  const isValidConnection = useCallback(
+    (connection: Connection | Edge) => {
+      if (!connection.source || !connection.target) return false;
+      if (connection.source === connection.target) {
+        setConsoleMsg('Invalid Connection: Self-referencing loops are not permitted');
+        return false;
+      }
+
+      const isDuplicate = edges.some(
+        (e) =>
+          e.source === connection.source &&
+          e.target === connection.target &&
+          e.sourceHandle === connection.sourceHandle &&
+          e.targetHandle === connection.targetHandle
+      );
+      if (isDuplicate) {
+        setConsoleMsg('Invalid Connection: Port connection already exists');
+        return false;
+      }
+
+      const sourceNode = nodes.find((n) => n.id === connection.source);
+      const targetNode = nodes.find((n) => n.id === connection.target);
+      if (!sourceNode || !targetNode) return false;
+
+      const sourcePort = sourceNode.data?.spec?.ports?.out?.find((p: any) => p.name === connection.sourceHandle);
+      const targetPort = targetNode.data?.spec?.ports?.in?.find((p: any) => p.name === connection.targetHandle);
+
+      if (!sourcePort || !targetPort) return true;
+
+      const st = sourcePort.type;
+      const tt = targetPort.type;
+
+      if (st === tt || st === 'Any' || tt === 'Any') return true;
+
+      const isAccessSource = ['AccessGate', 'OwnerRef', 'AdminRef', 'RoleGate'].includes(st);
+      const isAccessTarget = ['AccessGate', 'OwnerRef', 'AdminRef', 'RoleGate'].includes(tt);
+      if (isAccessSource && isAccessTarget) return true;
+
+      const isTokenSource = ['TokenRef', 'FinanceRef', 'CollectionRef'].includes(st);
+      const isTokenTarget = ['TokenRef', 'FinanceRef', 'CollectionRef'].includes(tt);
+      if (isTokenSource && isTokenTarget) return true;
+
+      const isMintSource = ['MintGate', 'MintRulesConfig'].includes(st);
+      const isMintTarget = ['MintGate', 'MintRulesConfig'].includes(tt);
+      if (isMintSource && isMintTarget) return true;
+
+      setConsoleMsg(`Port Type Mismatch: Cannot connect ${st} (${sourcePort.name}) to ${tt} (${targetPort.name})`);
+      return false;
+    },
+    [edges, nodes]
+  );
 
   // Convert graph to React Flow nodes/edges with clean left-to-right routing
   const loadGraphIntoCanvas = useCallback((graph: any, allBlocks: BlockSpec[]) => {
@@ -268,10 +454,12 @@ export default function WorkspacePage({ params }: { params: { projectId: string 
       },
     }));
 
-    setNodes(newNodes);
+    const validatedNodes = validateNodesWithEdges(newNodes, newEdges);
+    setNodes(validatedNodes);
     setEdges(newEdges);
-    triggerPipeline(newNodes, newEdges);
-  }, [setNodes, setEdges, triggerPipeline]);
+    pushHistory(validatedNodes, newEdges);
+    triggerPipeline(validatedNodes, newEdges);
+  }, [pushHistory, setEdges, setNodes, triggerPipeline, validateNodesWithEdges]);
 
   // Initial Data Fetch
   useEffect(() => {
@@ -319,31 +507,35 @@ export default function WorkspacePage({ params }: { params: { projectId: string 
       }
     }
     init();
-  }, [loadGraphIntoCanvas]);
+  }, [loadGraphIntoCanvas, params.projectId]);
 
-  // Connect ports with clean orthogonal smoothstep edge
+  // Connect ports with clean orthogonal smoothstep edge and validation
   const onConnect = useCallback(
     (connection: Connection) => {
-      setEdges((eds) => {
-        const updated = addEdge(
-          {
-            ...connection,
-            type: 'smoothstep',
-            style: { stroke: '#0f766e', strokeWidth: 2.5 },
-            markerEnd: {
-              type: MarkerType.ArrowClosed,
-              color: '#0f766e',
-              width: 14,
-              height: 14,
-            },
-          },
-          eds
-        );
-        triggerPipeline(nodes, updated);
-        return updated;
-      });
+      if (!isValidConnection(connection)) return;
+
+      const newEdge: Edge = {
+        ...connection,
+        id: `e_${connection.source}_${connection.target}_${Date.now()}`,
+        type: 'smoothstep',
+        style: { stroke: '#0f766e', strokeWidth: 2.5 },
+        markerEnd: {
+          type: MarkerType.ArrowClosed,
+          color: '#0f766e',
+          width: 14,
+          height: 14,
+        },
+      };
+
+      const updatedEdges = [...edges, newEdge];
+      const validatedNodes = validateNodesWithEdges(nodes, updatedEdges);
+      setEdges(updatedEdges);
+      setNodes(validatedNodes);
+      pushHistory(validatedNodes, updatedEdges);
+      triggerPipeline(validatedNodes, updatedEdges);
+      setConsoleMsg(`Connected ${connection.sourceHandle || 'out'} → ${connection.targetHandle || 'in'}`);
     },
-    [nodes, setEdges, triggerPipeline]
+    [edges, isValidConnection, nodes, pushHistory, setEdges, setNodes, triggerPipeline, validateNodesWithEdges]
   );
 
   // Drag & drop handlers
@@ -379,21 +571,21 @@ export default function WorkspacePage({ params }: { params: { projectId: string 
         },
       };
 
-      setNodes((nds) => {
-        const updated = nds.concat(newNode);
-        triggerPipeline(updated, edges);
-        return updated;
-      });
+      const updatedNodes = nodes.concat(newNode);
+      const validatedNodes = validateNodesWithEdges(updatedNodes, edges);
+      setNodes(validatedNodes);
+      pushHistory(validatedNodes, edges);
+      triggerPipeline(validatedNodes, edges);
     },
-    [blocksList, learningMode, edges, setNodes, triggerPipeline]
+    [blocksList, learningMode, edges, nodes, pushHistory, setNodes, triggerPipeline, validateNodesWithEdges]
   );
 
   const handleUpdateProps = (blockId: string, updatedProps: Record<string, any>) => {
-    setNodes((nds) => {
-      const updated = nds.map((n) => (n.id === blockId ? { ...n, data: { ...n.data, props: updatedProps } } : n));
-      triggerPipeline(updated, edges);
-      return updated;
-    });
+    const updated = nodes.map((n) => (n.id === blockId ? { ...n, data: { ...n.data, props: updatedProps } } : n));
+    const validated = validateNodesWithEdges(updated, edges);
+    setNodes(validated);
+    pushHistory(validated, edges);
+    triggerPipeline(validated, edges);
   };
 
   const onNodeClick = (_: any, node: Node) => {
@@ -510,6 +702,56 @@ export default function WorkspacePage({ params }: { params: { projectId: string 
             <CheckCircle2 size={13} />
             {saveStatus === 'saved' ? 'Autosaved' : saveStatus === 'saving' ? 'Autosaving (5s)...' : 'Unsaved Changes'}
           </span>
+
+          <span style={{ color: 'var(--border-strong)' }}>|</span>
+
+          {/* Undo / Redo controls */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <button
+              onClick={handleUndo}
+              disabled={!canUndo}
+              title="Undo last change (Ctrl+Z)"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '4px',
+                padding: '2px 8px',
+                borderRadius: '4px',
+                border: '1px solid var(--border-subtle)',
+                background: canUndo ? 'var(--surface-container-low)' : 'transparent',
+                color: canUndo ? 'var(--text-primary)' : 'var(--text-disabled)',
+                fontSize: '0.72rem',
+                fontWeight: 600,
+                cursor: canUndo ? 'pointer' : 'not-allowed',
+                opacity: canUndo ? 1 : 0.45,
+              }}
+            >
+              <Undo2 size={12} />
+              Undo
+            </button>
+            <button
+              onClick={handleRedo}
+              disabled={!canRedo}
+              title="Redo (Ctrl+Y or Ctrl+Shift+Z)"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '4px',
+                padding: '2px 8px',
+                borderRadius: '4px',
+                border: '1px solid var(--border-subtle)',
+                background: canRedo ? 'var(--surface-container-low)' : 'transparent',
+                color: canRedo ? 'var(--text-primary)' : 'var(--text-disabled)',
+                fontSize: '0.72rem',
+                fontWeight: 600,
+                cursor: canRedo ? 'pointer' : 'not-allowed',
+                opacity: canRedo ? 1 : 0.45,
+              }}
+            >
+              <Redo2 size={12} />
+              Redo
+            </button>
+          </div>
 
           <span style={{ color: 'var(--border-strong)' }}>|</span>
 
@@ -729,11 +971,11 @@ export default function WorkspacePage({ params }: { params: { projectId: string 
                   learningMode,
                 },
               };
-              setNodes((nds) => {
-                const updated = nds.concat(newNode);
-                triggerPipeline(updated, edges);
-                return updated;
-              });
+              const updatedNodes = nodes.concat(newNode);
+              const validatedNodes = validateNodesWithEdges(updatedNodes, edges);
+              setNodes(validatedNodes);
+              pushHistory(validatedNodes, edges);
+              triggerPipeline(validatedNodes, edges);
             }}
           />
 
@@ -758,7 +1000,13 @@ export default function WorkspacePage({ params }: { params: { projectId: string 
           {/* Top Quick Actions */}
           <div style={{ position: 'absolute', top: '1rem', left: '1rem', display: 'flex', gap: '0.5rem', zIndex: 10 }}>
             <button
-              onClick={() => { setNodes([]); setEdges([]); }}
+              onClick={() => {
+                setNodes([]);
+                setEdges([]);
+                pushHistory([], []);
+                triggerPipeline([], []);
+                setConsoleMsg('Canvas cleared');
+              }}
               style={{
                 padding: '5px 10px',
                 background: 'var(--surface-container-lowest)',
@@ -828,7 +1076,29 @@ export default function WorkspacePage({ params }: { params: { projectId: string 
             onNodesChange={onNodesChange}
             onEdgesChange={onEdgesChange}
             onConnect={onConnect}
+            isValidConnection={isValidConnection}
             onNodeClick={onNodeClick}
+            onNodeDragStop={() => pushHistory(nodes, edges)}
+            onNodesDelete={(deleted) => {
+              const remainingNodes = nodes.filter((n) => !deleted.some((d) => d.id === n.id));
+              const remainingEdges = edges.filter(
+                (e) => !deleted.some((d) => d.id === e.source || d.id === e.target)
+              );
+              const validated = validateNodesWithEdges(remainingNodes, remainingEdges);
+              setNodes(validated);
+              setEdges(remainingEdges);
+              pushHistory(validated, remainingEdges);
+              triggerPipeline(validated, remainingEdges);
+            }}
+            onEdgesDelete={(deleted) => {
+              const remaining = edges.filter((e) => !deleted.some((d) => d.id === e.id));
+              const validated = validateNodesWithEdges(nodes, remaining);
+              setNodes(validated);
+              setEdges(remaining);
+              pushHistory(validated, remaining);
+              triggerPipeline(validated, remaining);
+            }}
+            deleteKeyCode={['Backspace', 'Delete']}
             nodeTypes={nodeTypes}
             snapToGrid={gridSnap}
             snapGrid={[16, 16]}

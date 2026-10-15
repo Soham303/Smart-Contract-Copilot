@@ -219,24 +219,67 @@ export const BlockNode: React.FC<BlockNodeProps> = ({ id, data }) => {
           </div>
 
           <div
+            title={statusMessage || (status === 'valid' ? 'All invariants and port types verified' : 'Check requirements')}
             style={{
               padding: '2px 8px',
               borderRadius: '9999px',
               fontSize: '0.6875rem',
               fontWeight: 600,
               fontFamily: 'var(--font-mono)',
-              background: status === 'valid' ? 'var(--tertiary-container)' : 'var(--risk-critical-bg)',
-              color: status === 'valid' ? 'var(--tertiary)' : 'var(--risk-critical)',
-              border: `1px solid ${status === 'valid' ? 'var(--tertiary-border)' : 'var(--risk-critical-border)'}`,
+              background:
+                status === 'valid'
+                  ? 'var(--tertiary-container)'
+                  : status === 'warning'
+                  ? 'var(--risk-medium-bg)'
+                  : 'var(--risk-critical-bg)',
+              color:
+                status === 'valid'
+                  ? 'var(--tertiary)'
+                  : status === 'warning'
+                  ? 'var(--risk-medium)'
+                  : 'var(--risk-critical)',
+              border: `1px solid ${
+                status === 'valid'
+                  ? 'var(--tertiary-border)'
+                  : status === 'warning'
+                  ? 'var(--risk-medium-border)'
+                  : 'var(--risk-critical-border)'
+              }`,
               display: 'inline-flex',
               alignItems: 'center',
               gap: '4px',
             }}
           >
-            <CheckCircle2 size={11} />
-            {status === 'valid' ? 'Verified' : 'Check'}
+            {status === 'valid' ? (
+              <CheckCircle2 size={11} />
+            ) : (
+              <AlertTriangle size={11} />
+            )}
+            {status === 'valid' ? 'Verified' : status === 'warning' ? 'Check Input' : 'Error'}
           </div>
         </div>
+
+        {/* Status Message Banner if warning or error */}
+        {statusMessage && status !== 'valid' && (
+          <div
+            style={{
+              fontSize: '0.6875rem',
+              color: status === 'warning' ? 'var(--risk-medium)' : 'var(--risk-critical)',
+              background: status === 'warning' ? 'var(--risk-medium-bg)' : 'var(--risk-critical-bg)',
+              border: `1px solid ${status === 'warning' ? 'var(--risk-medium-border)' : 'var(--risk-critical-border)'}`,
+              borderRadius: '6px',
+              padding: '4px 8px',
+              marginBottom: '8px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '5px',
+              lineHeight: 1.3,
+            }}
+          >
+            <AlertTriangle size={12} style={{ flexShrink: 0 }} />
+            <span>{statusMessage}</span>
+          </div>
+        )}
 
         {/* Subtitle description */}
         <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', lineHeight: 1.4, marginBottom: '8px' }}>

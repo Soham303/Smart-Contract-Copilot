@@ -2,6 +2,7 @@ export interface PortSpec {
   name: string;
   type: string;
   description?: string;
+  required?: boolean;
 }
 
 export interface PropSpec {
