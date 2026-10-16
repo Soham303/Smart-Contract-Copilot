@@ -52,39 +52,62 @@ class AiCodeGeneratorService:
         api_key: str,
         model_preference: Optional[str]
     ) -> Optional[Dict[str, Any]]:
-        is_gemini = "AIza" in api_key or (model_preference and "gemini" in model_preference.lower()) or os.getenv("GEMINI_API_KEY") == api_key
+        system_instruction = (
+            "You are an expert Aptos Move 2.0 compiler and smart contract security auditor. "
+            "Given the user's Contract Graph JSON, generate a production-ready Aptos Move package with Move.toml and "
+            "sources/<module>.move. Ensure strict adherence to Move 2.0 idioms, explicit acquires annotations, and "
+            "correct resource capability patterns. Return JSON with 'files': {'Move.toml': '...', 'sources/contract.move': '...'} "
+            "and 'reasoning': ['step 1', 'step 2']."
+        )
+        user_content = f"Contract Graph:\n{json.dumps(graph_dict, indent=2)}\n\nUser instructions: {user_prompt or 'Generate verified Move 2.0 contract'}"
+
+        is_gemini = "AIza" in api_key or api_key.startswith("AQ.") or (model_preference and "gemini" in model_preference.lower()) or os.getenv("GEMINI_API_KEY") == api_key
         is_groq = api_key.startswith("gsk_") or (model_preference and "groq" in model_preference.lower()) or os.getenv("GROQ_API_KEY") == api_key
 
         if is_gemini:
-            # Gemini 1.5 Flash has a generous 100% FREE tier (15 RPM, 1500 req/day)
-            gemini_model = model_preference if model_preference and "gemini" in model_preference else "gemini-1.5-flash"
-            url = f"https://generativelanguage.googleapis.com/v1beta/models/{gemini_model}:generateContent?key={api_key}"
-            req_data = {
-                "contents": [
-                    {"parts": [{"text": f"{system_instruction}\n\n{user_content}"}]}
-                ],
-                "generationConfig": {"temperature": 0.2, "responseMimeType": "application/json"}
-            }
-            req = urllib.request.Request(
-                url,
-                data=json.dumps(req_data).encode("utf-8"),
-                headers={"Content-Type": "application/json"}
-            )
-            with urllib.request.urlopen(req, timeout=30) as resp:
-                data = json.loads(resp.read().decode("utf-8"))
-                text = data["candidates"][0]["content"]["parts"][0]["text"]
-                parsed = json.loads(text)
-                files = parsed.get("files", {})
-                reasoning = parsed.get("reasoning", ["Synthesized via Google Gemini 1.5 Flash (Free Tier)"])
-                graph = ContractGraph(**graph_dict)
-                _, source_map = self.default_target.generate(graph)
-                return {
-                    "files": files,
-                    "sourceMap": source_map.to_dict(),
-                    "aiReasoning": reasoning,
-                    "model": f"Google {gemini_model.title()}",
-                    "verified": True
+            candidate_models = [model_preference] if model_preference and "gemini" in model_preference else ["gemini-3-flash-preview", "gemini-flash-latest", "gemini-2.5-flash-lite", "gemini-1.5-flash"]
+            last_err = None
+            for gemini_model in candidate_models:
+                url = f"https://generativelanguage.googleapis.com/v1beta/models/{gemini_model}:generateContent?key={api_key}"
+                req_data = {
+                    "contents": [
+                        {"parts": [{"text": f"{system_instruction}\n\n{user_content}"}]}
+                    ],
+                    "generationConfig": {"temperature": 0.2, "responseMimeType": "application/json"}
                 }
+                req = urllib.request.Request(
+                    url,
+                    data=json.dumps(req_data).encode("utf-8"),
+                    headers={"Content-Type": "application/json"}
+                )
+                try:
+                    with urllib.request.urlopen(req, timeout=30) as resp:
+                        data = json.loads(resp.read().decode("utf-8"))
+                        text = data["candidates"][0]["content"]["parts"][0]["text"]
+                        parsed = json.loads(text)
+                        files = parsed.get("files", {})
+                        raw_reasoning = parsed.get("reasoning", [f"Synthesized via Google {gemini_model.title()} (Free Tier)"])
+                        reasoning = [raw_reasoning] if isinstance(raw_reasoning, str) else list(raw_reasoning)
+                        try:
+                            graph = ContractGraph(**graph_dict)
+                            _, source_map = self.default_target.generate(graph)
+                            sm_dict = source_map.to_dict()
+                        except Exception:
+                            sm_dict = {"blockToLines": {}, "lineToBlock": {}}
+
+                        return {
+                            "files": files,
+                            "sourceMap": sm_dict,
+                            "aiReasoning": reasoning,
+                            "model": f"Google {gemini_model.title()}",
+                            "verified": True
+                        }
+                except Exception as err:
+                    print(f"[AiCodeGenerator] Gemini model {gemini_model} error: {err}")
+                    last_err = err
+                    continue
+            if last_err:
+                print(f"[AiCodeGenerator] Gemini API error: {last_err}, falling back to autonomous Move 2.0 synthesizer")
         elif is_groq:
             # Groq Cloud 100% Free Tier (Llama 3.3 70B)
             url = "https://api.groq.com/openai/v1/chat/completions"

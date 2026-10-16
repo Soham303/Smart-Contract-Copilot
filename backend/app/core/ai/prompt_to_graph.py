@@ -340,7 +340,7 @@ class PromptToGraphService:
         import urllib.request
         import urllib.error
 
-        is_gemini = "AIza" in api_key or os.getenv("GEMINI_API_KEY") == api_key
+        is_gemini = "AIza" in api_key or api_key.startswith("AQ.") or os.getenv("GEMINI_API_KEY") == api_key
         if not is_gemini:
             return None, None
 
@@ -353,34 +353,36 @@ class PromptToGraphService:
             "Return JSON only."
         )
 
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key}"
-        req_data = {
-            "contents": [
-                {"parts": [{"text": f"{sys_msg}\n\nUser Prompt: {prompt}"}]}
-            ],
-            "generationConfig": {"temperature": 0.2, "responseMimeType": "application/json"}
-        }
-        try:
-            req = urllib.request.Request(
-                url,
-                data=json.dumps(req_data).encode("utf-8"),
-                headers={"Content-Type": "application/json"}
-            )
-            with urllib.request.urlopen(req, timeout=15) as resp:
-                data = json.loads(resp.read().decode("utf-8"))
-                text = data["candidates"][0]["content"]["parts"][0]["text"]
-                graph = json.loads(text)
-                if "blocks" in graph and "edges" in graph:
-                    diff = {
-                        "prompt": prompt,
-                        "totalBlocks": len(graph.get("blocks", [])),
-                        "edgesCount": len(graph.get("edges", [])),
-                        "addedBlocks": [b.get("type", "") for b in graph.get("blocks", [])],
-                        "explanation": f"Autonomously synthesized {len(graph.get('blocks', []))} interconnected blocks via Gemini 1.5 Flash (Free Tier)"
-                    }
-                    return graph, diff
-        except Exception as e:
-            print(f"[PromptToGraph] Gemini API call error: {e}, using local semantic synthesizer")
+        candidate_models = ["gemini-3-flash-preview", "gemini-flash-latest", "gemini-2.5-flash-lite", "gemini-1.5-flash"]
+        for gemini_model in candidate_models:
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/{gemini_model}:generateContent?key={api_key}"
+            req_data = {
+                "contents": [
+                    {"parts": [{"text": f"{sys_msg}\n\nUser Prompt: {prompt}"}]}
+                ],
+                "generationConfig": {"temperature": 0.2, "responseMimeType": "application/json"}
+            }
+            try:
+                req = urllib.request.Request(
+                    url,
+                    data=json.dumps(req_data).encode("utf-8"),
+                    headers={"Content-Type": "application/json"}
+                )
+                with urllib.request.urlopen(req, timeout=15) as resp:
+                    data = json.loads(resp.read().decode("utf-8"))
+                    text = data["candidates"][0]["content"]["parts"][0]["text"]
+                    graph = json.loads(text)
+                    if "blocks" in graph and "edges" in graph:
+                        diff = {
+                            "prompt": prompt,
+                            "totalBlocks": len(graph.get("blocks", [])),
+                            "edgesCount": len(graph.get("edges", [])),
+                            "addedBlocks": [b.get("type", "") for b in graph.get("blocks", [])],
+                            "explanation": f"Autonomously synthesized {len(graph.get('blocks', []))} interconnected blocks via Google {gemini_model.title()} (Free Tier)"
+                        }
+                        return graph, diff
+            except Exception as e:
+                continue
 
         return None, None
 
