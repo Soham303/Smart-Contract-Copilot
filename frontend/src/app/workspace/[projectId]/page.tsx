@@ -67,6 +67,8 @@ import {
   Undo2,
   Redo2,
   AlertTriangle,
+  Maximize2,
+  Minimize2,
 } from 'lucide-react';
 
 interface BlockNodeData {
@@ -87,8 +89,33 @@ export default function WorkspacePage({ params }: { params: { projectId: string 
   const [templates, setTemplates] = useState<any[]>([]);
   const [concepts, setConcepts] = useState<any[]>([]);
 
-  // Inspector & Code Drawer Toggle (User can show/unshow freely)
+  // Inspector & Code Drawer Toggle (User can show/unshow freely & resize)
   const [isInspectorOpen, setIsInspectorOpen] = useState<boolean>(false);
+  const [inspectorWidth, setInspectorWidth] = useState<number>(500);
+  const [isInspectorExpanded, setIsInspectorExpanded] = useState<boolean>(false);
+  const isResizingRef = React.useRef<boolean>(false);
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isResizingRef.current) return;
+      const newWidth = Math.min(Math.max(window.innerWidth - e.clientX, 360), 960);
+      setInspectorWidth(newWidth);
+    };
+
+    const handleMouseUp = () => {
+      isResizingRef.current = false;
+      document.body.style.cursor = 'default';
+      document.body.style.userSelect = 'auto';
+    };
+
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, []);
+
   const [activeTab, setActiveTab] = useState<'properties' | 'code' | 'audit' | 'gas' | 'permissions' | 'learn'>('code');
   const [learningMode, setLearningMode] = useState<boolean>(true);
   const [gridSnap, setGridSnap] = useState<boolean>(true);
@@ -1345,16 +1372,42 @@ export default function WorkspacePage({ params }: { params: { projectId: string 
         {isInspectorOpen && (
           <aside
             style={{
-              width: '440px',
-              borderLeft: '1px solid var(--border-subtle)',
-              background: 'var(--code-canvas)',
+              width: isInspectorExpanded ? 'min(920px, calc(100vw - 320px))' : `${inspectorWidth}px`,
+              minWidth: isInspectorExpanded ? '560px' : '360px',
+              maxWidth: '960px',
+              borderLeft: '1px solid #1e293b',
+              background: '#040711',
               color: 'var(--code-text)',
               display: 'flex',
               flexDirection: 'column',
               position: 'relative',
               animation: 'fadeIn 0.2s ease',
+              transition: isResizingRef.current ? 'none' : 'width 0.15s ease',
+              boxShadow: '-4px 0 24px rgba(0, 0, 0, 0.5)',
+              zIndex: 30,
             }}
           >
+            {/* Left Resize Drag Handle */}
+            <div
+              onMouseDown={(e) => {
+                e.preventDefault();
+                isResizingRef.current = true;
+                document.body.style.cursor = 'col-resize';
+                document.body.style.userSelect = 'none';
+              }}
+              title="Drag to resize code & inspector drawer"
+              style={{
+                position: 'absolute',
+                top: 0,
+                bottom: 0,
+                left: -4,
+                width: '8px',
+                cursor: 'col-resize',
+                zIndex: 50,
+                background: 'transparent',
+              }}
+            />
+
             {/* Tabs Header + Close Button */}
             <div
               style={{
@@ -1363,7 +1416,7 @@ export default function WorkspacePage({ params }: { params: { projectId: string 
                 justifyContent: 'space-between',
                 borderBottom: '1px solid #1e293b',
                 background: '#090d16',
-                paddingRight: '6px',
+                paddingRight: '8px',
               }}
             >
               <div style={{ display: 'flex', flex: 1, overflowX: 'auto' }}>
@@ -1379,13 +1432,13 @@ export default function WorkspacePage({ params }: { params: { projectId: string 
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id as any)}
                     style={{
-                      padding: '10px 8px',
+                      padding: '10px 10px',
                       background: 'transparent',
                       border: 'none',
                       color: activeTab === tab.id ? '#ffffff' : '#94a3b8',
                       borderBottom: activeTab === tab.id ? '2px solid var(--primary)' : '2px solid transparent',
                       fontWeight: activeTab === tab.id ? 700 : 500,
-                      fontSize: '0.72rem',
+                      fontSize: '0.74rem',
                       cursor: 'pointer',
                       whiteSpace: 'nowrap',
                     }}
@@ -1395,26 +1448,46 @@ export default function WorkspacePage({ params }: { params: { projectId: string 
                 ))}
               </div>
 
-              {/* Close / Collapse Button */}
-              <button
-                onClick={() => setIsInspectorOpen(false)}
-                title="Collapse inspector"
-                style={{
-                  width: '26px',
-                  height: '26px',
-                  borderRadius: '4px',
-                  background: 'rgba(255, 255, 255, 0.08)',
-                  border: '1px solid #334155',
-                  color: '#cbd5e1',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  cursor: 'pointer',
-                  marginLeft: '4px',
-                }}
-              >
-                <X size={14} />
-              </button>
+              {/* Action Controls: Expand / Restore & Close */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <button
+                  onClick={() => setIsInspectorExpanded(!isInspectorExpanded)}
+                  title={isInspectorExpanded ? 'Restore compact drawer width' : 'Expand to wide drawer view'}
+                  style={{
+                    width: '26px',
+                    height: '26px',
+                    borderRadius: '4px',
+                    background: isInspectorExpanded ? 'var(--primary-container)' : 'rgba(255, 255, 255, 0.08)',
+                    border: '1px solid #334155',
+                    color: isInspectorExpanded ? 'var(--primary)' : '#cbd5e1',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    cursor: 'pointer',
+                  }}
+                >
+                  {isInspectorExpanded ? <Minimize2 size={13} /> : <Maximize2 size={13} />}
+                </button>
+
+                <button
+                  onClick={() => setIsInspectorOpen(false)}
+                  title="Collapse inspector"
+                  style={{
+                    width: '26px',
+                    height: '26px',
+                    borderRadius: '4px',
+                    background: 'rgba(255, 255, 255, 0.08)',
+                    border: '1px solid #334155',
+                    color: '#cbd5e1',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    cursor: 'pointer',
+                  }}
+                >
+                  <X size={14} />
+                </button>
+              </div>
             </div>
 
             {/* Code Header Bar with Sync Badge and Download */}

@@ -14,6 +14,7 @@ import {
   ChevronUp,
   Cpu,
   Clock,
+  Search,
 } from 'lucide-react';
 
 interface LiveCodePanelProps {
@@ -40,6 +41,7 @@ export const LiveCodePanel: React.FC<LiveCodePanelProps> = ({
     fileNames.find((f) => f.endsWith('.move')) || fileNames[0] || 'sources/contract.move'
   );
   const [copied, setCopied] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
   // AI Generation State
   const [isGenerating, setIsGenerating] = useState(false);
@@ -83,6 +85,56 @@ export const LiveCodePanel: React.FC<LiveCodePanelProps> = ({
       }
     }
   }, [highlightedRange]);
+
+  // Pure React Move Syntax Highlighter
+  const renderSyntaxHighlightedLine = (line: string, query?: string) => {
+    const commentIndex = line.indexOf('//');
+    let codePart = line;
+    let commentPart = '';
+    if (commentIndex !== -1) {
+      codePart = line.substring(0, commentIndex);
+      commentPart = line.substring(commentIndex);
+    }
+
+    const tokenRegex = /("(?:[^"\\]|\\.)*")|\b(module|use|struct|public|entry|fun|has|key|store|copy|drop|let|mut|if|else|return|abort|acquires|const|assert!|as)\b|\b(u8|u16|u32|u64|u128|u256|bool|address|signer|vector|String)\b|\b(0x[0-9a-fA-F]+|\d+)\b|(@[a-zA-Z0-9_]+)/g;
+
+    const parts: React.ReactNode[] = [];
+    let lastIndex = 0;
+    let match;
+
+    while ((match = tokenRegex.exec(codePart)) !== null) {
+      if (match.index > lastIndex) {
+        parts.push(codePart.substring(lastIndex, match.index));
+      }
+
+      const [full, str, kw, typeName, num, addr] = match;
+      if (str) {
+        parts.push(<span key={match.index} style={{ color: '#fde047' }}>{str}</span>);
+      } else if (kw) {
+        parts.push(<span key={match.index} style={{ color: '#38bdf8', fontWeight: 600 }}>{kw}</span>);
+      } else if (typeName) {
+        parts.push(<span key={match.index} style={{ color: '#34d399', fontWeight: 600 }}>{typeName}</span>);
+      } else if (num) {
+        parts.push(<span key={match.index} style={{ color: '#fb923c' }}>{num}</span>);
+      } else if (addr) {
+        parts.push(<span key={match.index} style={{ color: '#c084fc' }}>{addr}</span>);
+      } else {
+        parts.push(full);
+      }
+
+      lastIndex = tokenRegex.lastIndex;
+    }
+
+    if (lastIndex < codePart.length) {
+      parts.push(codePart.substring(lastIndex));
+    }
+
+    if (commentPart) {
+      parts.push(<span key="comment" style={{ color: '#64748b', fontStyle: 'italic' }}>{commentPart}</span>);
+    }
+
+    return parts.length > 0 ? parts : ' ';
+  };
 
   const handleCopy = () => {
     navigator.clipboard.writeText(currentCode);
@@ -389,6 +441,36 @@ export const LiveCodePanel: React.FC<LiveCodePanelProps> = ({
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          {/* Quick Search in Move Code */}
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+              background: '#040711',
+              border: '1px solid #1e293b',
+              borderRadius: '4px',
+              padding: '2px 6px',
+            }}
+          >
+            <Search size={11} color="#64748b" />
+            <input
+              type="text"
+              placeholder="Find..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              style={{
+                width: '70px',
+                background: 'transparent',
+                border: 'none',
+                outline: 'none',
+                color: '#ffffff',
+                fontSize: '0.72rem',
+                fontFamily: 'var(--font-mono)',
+              }}
+            />
+          </div>
+
           <button
             onClick={handleCopy}
             style={{
@@ -459,10 +541,11 @@ export const LiveCodePanel: React.FC<LiveCodePanelProps> = ({
           margin: 0,
           padding: '12px 0',
           overflow: 'auto',
-          fontFamily: 'var(--font-mono)',
-          fontSize: '0.8rem',
-          lineHeight: '1.6',
-          background: '#090d16',
+          fontFamily: "'JetBrains Mono', 'Fira Code', 'Menlo', monospace",
+          fontSize: '0.82rem',
+          lineHeight: '1.65',
+          background: '#040711',
+          letterSpacing: '-0.01em',
         }}
       >
         {codeLines.map((line, idx) => {
@@ -471,6 +554,7 @@ export const LiveCodePanel: React.FC<LiveCodePanelProps> = ({
             highlightedRange &&
             lineNum >= highlightedRange.startLine &&
             lineNum <= highlightedRange.endLine;
+          const isSearchMatch = searchQuery && line.toLowerCase().includes(searchQuery.toLowerCase());
 
           return (
             <div
@@ -479,34 +563,45 @@ export const LiveCodePanel: React.FC<LiveCodePanelProps> = ({
               style={{
                 display: 'flex',
                 padding: '0 12px',
-                background: isHighlighted ? 'rgba(15, 118, 110, 0.22)' : 'transparent',
-                borderLeft: isHighlighted ? '3px solid #2dd4bf' : '3px solid transparent',
+                background: isHighlighted
+                  ? 'rgba(15, 118, 110, 0.25)'
+                  : isSearchMatch
+                  ? 'rgba(234, 179, 8, 0.18)'
+                  : 'transparent',
+                borderLeft: isHighlighted
+                  ? '3px solid #2dd4bf'
+                  : isSearchMatch
+                  ? '3px solid #eab308'
+                  : '3px solid transparent',
                 transition: 'background 0.15s ease',
               }}
             >
-              {/* Line Number */}
+              {/* Line Number Gutter */}
               <span
                 style={{
-                  width: '38px',
+                  width: '42px',
                   color: isHighlighted ? '#2dd4bf' : '#475569',
                   userSelect: 'none',
                   textAlign: 'right',
                   paddingRight: '16px',
-                  fontSize: '0.72rem',
+                  fontSize: '0.74rem',
+                  fontFamily: 'var(--font-mono)',
+                  opacity: 0.75,
                 }}
               >
                 {lineNum}
               </span>
 
-              {/* Code Line Content */}
+              {/* Code Line Content with Syntax Highlighting */}
               <span
                 style={{
                   flex: 1,
                   whiteSpace: 'pre',
                   color: isHighlighted ? '#f0fdfa' : '#cbd5e1',
+                  fontFamily: "'JetBrains Mono', 'Fira Code', 'Menlo', monospace",
                 }}
               >
-                {line || ' '}
+                {renderSyntaxHighlightedLine(line, searchQuery)}
               </span>
             </div>
           );
