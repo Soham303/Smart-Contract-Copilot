@@ -108,3 +108,14 @@ def get_current_user():
         }), 200
 
     return jsonify({"isGuest": True, "user": None}), 200
+
+@auth_bp.route("/activity", methods=["GET"])
+@jwt_required(optional=True)
+def get_user_activity():
+    """Get chronological activity audit log for the current user (PRD FR-1.4)."""
+    identity = get_jwt_identity() or "usr_demo"
+    activities = db_repo.list_user_activities(identity, limit=50)
+    return jsonify({
+        "activities": activities,
+        "count": len(activities)
+    }), 200

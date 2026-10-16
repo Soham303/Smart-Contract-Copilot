@@ -53,6 +53,14 @@ export async function getAuthProfile() {
   return res.json();
 }
 
+export async function fetchUserActivities(limit: number = 20) {
+  const token = getStoredToken();
+  const res = await fetch(`${API_BASE}/auth/activity?limit=${limit}`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  return res.json();
+}
+
 // ==================== PROJECTS ====================
 export async function fetchProjects() {
   const res = await fetch(`${API_BASE}/projects`, {

@@ -17,8 +17,13 @@ import {
   HardDrive,
   CheckCircle2,
   Wallet,
+  Sparkles,
+  Activity,
+  Clock,
+  Shield,
+  RefreshCw,
 } from 'lucide-react';
-import { fetchDeployments } from '../../lib/api';
+import { fetchDeployments, fetchUserActivities } from '../../lib/api';
 
 export default function AccountHubPage() {
   const [faucetLoading, setFaucetLoading] = useState(false);
@@ -29,6 +34,9 @@ export default function AccountHubPage() {
   const [toggleAutoAudit, setToggleAutoAudit] = useState(true);
   const [toggleMoveProver, setToggleMoveProver] = useState(true);
   const [toggleGasTelemetry, setToggleGasTelemetry] = useState(true);
+  const [activitiesList, setActivitiesList] = useState<any[]>([]);
+  const [activityFilter, setActivityFilter] = useState<'all' | 'deploy' | 'audit' | 'ai'>('all');
+  const [activitiesLoading, setActivitiesLoading] = useState(false);
   const [deploymentsList, setDeploymentsList] = useState<any[]>([
     {
       module: 'copilot_addr::sky_apes_token',
@@ -105,7 +113,22 @@ export default function AccountHubPage() {
       }
     }
     loadHistory();
+    loadActivities();
   }, []);
+
+  const loadActivities = async () => {
+    setActivitiesLoading(true);
+    try {
+      const res = await fetchUserActivities(30);
+      if (res && res.activities && res.activities.length > 0) {
+        setActivitiesList(res.activities);
+      }
+    } catch (err) {
+      console.warn('Could not load activities:', err);
+    } finally {
+      setActivitiesLoading(false);
+    }
+  };
 
   const handleRequestFaucet = () => {
     setFaucetLoading(true);
@@ -161,6 +184,14 @@ export default function AccountHubPage() {
     setToggleGasTelemetry(checked);
     if (typeof window !== 'undefined') localStorage.setItem('scc_pref_gasTelemetry', String(checked));
   };
+
+  const filteredActivities = activitiesList.filter((item) => {
+    if (activityFilter === 'all') return true;
+    if (activityFilter === 'deploy') return item.type === 'deploy';
+    if (activityFilter === 'audit') return item.type === 'audit';
+    if (activityFilter === 'ai') return item.type === 'ai_synthesis';
+    return true;
+  });
 
   return (
     <div style={{ background: 'var(--surface)', minHeight: 'calc(100vh - 64px)', padding: '2.5rem 1.5rem 5rem' }}>
@@ -497,6 +528,215 @@ export default function AccountHubPage() {
               ))}
             </tbody>
           </table>
+        </div>
+
+        {/* --- Activity & Audit Trail Timeline --- */}
+        <div
+          style={{
+            background: '#ffffff',
+            border: '1px solid var(--border-subtle)',
+            borderRadius: '12px',
+            overflow: 'hidden',
+            boxShadow: 'var(--shadow-sm)',
+            marginBottom: '3rem',
+          }}
+        >
+          <div
+            style={{
+              padding: '16px 20px',
+              background: 'var(--surface-container-low)',
+              borderBottom: '1px solid var(--border-subtle)',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              flexWrap: 'wrap',
+              gap: '12px',
+            }}
+          >
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Activity size={18} color="var(--primary)" />
+                <h3 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>
+                  Developer Activity & Audit Log
+                </h3>
+              </div>
+              <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                Persistent record of your on-chain publications, security audits, and AI synthesis sessions
+              </span>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              {(['all', 'deploy', 'audit', 'ai'] as const).map((filterKey) => (
+                <button
+                  key={filterKey}
+                  onClick={() => setActivityFilter(filterKey)}
+                  style={{
+                    padding: '4px 10px',
+                    borderRadius: '6px',
+                    border: '1px solid',
+                    borderColor: activityFilter === filterKey ? 'var(--primary)' : 'var(--border-subtle)',
+                    background: activityFilter === filterKey ? 'var(--primary)' : '#ffffff',
+                    color: activityFilter === filterKey ? '#ffffff' : 'var(--text-secondary)',
+                    fontSize: '0.75rem',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    textTransform: 'capitalize',
+                  }}
+                >
+                  {filterKey === 'all' ? 'All Activities' : filterKey === 'ai' ? 'AI Synthesis' : filterKey === 'deploy' ? 'Deployments' : 'Audits'}
+                </button>
+              ))}
+
+              <button
+                onClick={loadActivities}
+                disabled={activitiesLoading}
+                style={{
+                  padding: '5px 8px',
+                  borderRadius: '6px',
+                  border: '1px solid var(--border-subtle)',
+                  background: '#ffffff',
+                  color: 'var(--text-secondary)',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                }}
+                title="Refresh Activities"
+              >
+                <RefreshCw size={13} className={activitiesLoading ? 'spin' : ''} />
+              </button>
+            </div>
+          </div>
+
+          <div style={{ padding: '20px' }}>
+            {activitiesLoading && activitiesList.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '2rem 0', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
+                Loading activity audit trail...
+              </div>
+            ) : filteredActivities.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '2rem 0', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
+                No activity logs found for this filter.
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                {filteredActivities.map((act, index) => {
+                  const isDeploy = act.type === 'deploy';
+                  const isAudit = act.type === 'audit';
+                  const isAi = act.type === 'ai_synthesis';
+                  
+                  const iconBg = isDeploy ? '#ecfdf5' : isAudit ? '#eff6ff' : isAi ? '#f5f3ff' : '#f0fdfa';
+                  const iconColor = isDeploy ? '#059669' : isAudit ? '#2563eb' : isAi ? '#7c3aed' : '#0f766e';
+                  const typeLabel = isDeploy ? 'DEPLOYMENT' : isAudit ? 'SECURITY AUDIT' : isAi ? 'AI SYNTHESIS' : 'PROJECT';
+
+                  return (
+                    <div
+                      key={act.id || index}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'flex-start',
+                        gap: '14px',
+                        padding: '12px 14px',
+                        borderRadius: '8px',
+                        background: 'var(--surface)',
+                        border: '1px solid var(--border-subtle)',
+                      }}
+                    >
+                      <div
+                        style={{
+                          width: '36px',
+                          height: '36px',
+                          borderRadius: '8px',
+                          background: iconBg,
+                          color: iconColor,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          flexShrink: 0,
+                          marginTop: '2px',
+                        }}
+                      >
+                        {isDeploy && <CheckCircle2 size={18} />}
+                        {isAudit && <Shield size={18} />}
+                        {isAi && <Sparkles size={18} />}
+                        {!isDeploy && !isAudit && !isAi && <FileCode size={18} />}
+                      </div>
+
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px', marginBottom: '4px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <span
+                              style={{
+                                fontSize: '0.65rem',
+                                fontWeight: 800,
+                                fontFamily: 'var(--font-mono)',
+                                color: iconColor,
+                                background: iconBg,
+                                padding: '2px 6px',
+                                borderRadius: '4px',
+                              }}
+                            >
+                              {typeLabel}
+                            </span>
+                            <span style={{ fontSize: '0.875rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+                              {act.title}
+                            </span>
+                          </div>
+
+                          <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                            <Clock size={12} />
+                            {act.createdAt ? new Date(act.createdAt).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Recent'}
+                          </span>
+                        </div>
+
+                        <p style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)', margin: '0 0 6px' }}>
+                          {act.description}
+                        </p>
+
+                        {/* Metadata tags */}
+                        {act.metadata && (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', fontSize: '0.72rem', fontFamily: 'var(--font-mono)' }}>
+                            {act.metadata.txHash && (
+                              <a
+                                href={`https://explorer.aptoslabs.com/txn/${act.metadata.txHash}?network=testnet`}
+                                target="_blank"
+                                rel="noreferrer"
+                                style={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '4px',
+                                  color: 'var(--primary)',
+                                  textDecoration: 'none',
+                                  background: 'var(--primary-container)',
+                                  padding: '2px 8px',
+                                  borderRadius: '4px',
+                                }}
+                              >
+                                Tx: {act.metadata.txHash.slice(0, 10)}... <ExternalLink size={10} />
+                              </a>
+                            )}
+                            {act.metadata.score !== undefined && (
+                              <span style={{ color: '#059669', background: '#ecfdf5', padding: '2px 8px', borderRadius: '4px' }}>
+                                Audit Score: {act.metadata.score}/100
+                              </span>
+                            )}
+                            {act.metadata.module && (
+                              <span style={{ color: 'var(--text-muted)', background: 'var(--surface-container-low)', padding: '2px 8px', borderRadius: '4px' }}>
+                                Module: {act.metadata.module}
+                              </span>
+                            )}
+                            {act.metadata.blocksCount !== undefined && (
+                              <span style={{ color: '#7c3aed', background: '#f5f3ff', padding: '2px 8px', borderRadius: '4px' }}>
+                                Blocks: {act.metadata.blocksCount}
+                              </span>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* --- Developer Preferences Section (Dual Cards) --- */}

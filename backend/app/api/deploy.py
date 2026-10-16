@@ -56,6 +56,14 @@ def record_deployment():
         code_hash=code_hash
     )
 
+    db_repo.record_activity(
+        user_id="usr_demo",
+        action="CONTRACT_DEPLOYED",
+        title=f"Published Move Package to Aptos {network.title()}",
+        details={"address": address, "txHash": tx_hash, "codeHash": code_hash, "network": network},
+        project_id=project_id
+    )
+
     return jsonify({
         "message": "Deployment recorded successfully",
         "deployment": deployment
