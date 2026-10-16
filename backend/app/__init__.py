@@ -26,17 +26,25 @@ def create_app(config_class=Config):
     from app.api.concepts import concepts_bp
     from app.api.reports import reports_bp
 
-    app.register_blueprint(auth_bp, url_prefix="/auth")
-    app.register_blueprint(projects_bp, url_prefix="/projects")
-    app.register_blueprint(blocks_bp, url_prefix="/blocks")
-    app.register_blueprint(templates_bp, url_prefix="/templates")
-    app.register_blueprint(graph_bp, url_prefix="/graph")
-    app.register_blueprint(generate_bp, url_prefix="/generate")
-    app.register_blueprint(ai_bp, url_prefix="/ai")
-    app.register_blueprint(jobs_bp, url_prefix="/jobs")
-    app.register_blueprint(deploy_bp, url_prefix="/deploy")
-    app.register_blueprint(concepts_bp, url_prefix="/concepts")
-    app.register_blueprint(reports_bp, url_prefix="/reports")
+    # Register API Blueprints with dual routing for backwards & PRD compliance
+    blueprints = [
+        (auth_bp, "auth"),
+        (projects_bp, "projects"),
+        (blocks_bp, "blocks"),
+        (templates_bp, "templates"),
+        (graph_bp, "graph"),
+        (generate_bp, "generate"),
+        (ai_bp, "ai"),
+        (jobs_bp, "jobs"),
+        (deploy_bp, "deploy"),
+        (concepts_bp, "concepts"),
+        (reports_bp, "reports"),
+    ]
+
+    for bp, prefix in blueprints:
+        app.register_blueprint(bp, url_prefix=f"/{prefix}")
+        app.register_blueprint(bp, url_prefix=f"/api/v1/{prefix}", name=f"{bp.name}_v1")
+
 
     @app.route("/health")
     def health_check():

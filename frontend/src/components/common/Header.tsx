@@ -192,112 +192,142 @@ export const Header: React.FC = () => {
           <Bell size={15} />
         </button>
 
-        {/* User Profile Avatar: Nina Vance */}
-        <div style={{ position: 'relative' }}>
+        {/* User Profile Avatar or Sign In CTA */}
+        {!isLoggedIn ? (
           <button
-            onClick={() => setShowUserDropdown(!showUserDropdown)}
+            onClick={openAuthModal}
+            id="header-signin-btn"
             style={{
+              padding: '6px 14px',
+              borderRadius: '8px',
+              border: '1px solid rgba(15, 118, 110, 0.4)',
+              background: 'linear-gradient(135deg, #0f766e 0%, #0d9488 100%)',
+              color: '#ffffff',
+              fontSize: '0.8rem',
+              fontWeight: 600,
+              cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
               gap: '6px',
-              padding: '2px 4px 2px 2px',
-              borderRadius: '9999px',
-              background: 'transparent',
-              border: 'none',
-              cursor: 'pointer',
+              boxShadow: '0 2px 6px rgba(15, 118, 110, 0.25)',
             }}
           >
-            <div
+            <span>Sign In</span>
+          </button>
+        ) : (
+          <div style={{ position: 'relative' }}>
+            <button
+              onClick={() => setShowUserDropdown(!showUserDropdown)}
               style={{
-                width: '30px',
-                height: '30px',
-                borderRadius: '50%',
-                background: 'linear-gradient(135deg, #0f766e 0%, #3b82f6 100%)',
-                color: '#ffffff',
-                fontWeight: 700,
-                fontSize: '0.75rem',
                 display: 'flex',
                 alignItems: 'center',
-                justifyContent: 'center',
-                boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+                gap: '6px',
+                padding: '2px 4px 2px 2px',
+                borderRadius: '9999px',
+                background: 'transparent',
+                border: 'none',
+                cursor: 'pointer',
               }}
             >
-              NV
-            </div>
-            <div style={{ textAlign: 'left', lineHeight: 1.1, display: 'none' }}>
-              <div style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-primary)' }}>Nina Vance</div>
-            </div>
-            <ChevronDown size={12} color="var(--text-muted)" />
-          </button>
-
-          {showUserDropdown && (
-            <div
-              style={{
-                position: 'absolute',
-                top: '40px',
-                right: 0,
-                width: '210px',
-                background: 'var(--surface-container-lowest)',
-                borderRadius: '8px',
-                border: '1px solid var(--border-subtle)',
-                boxShadow: 'var(--shadow-md)',
-                padding: '8px',
-                zIndex: 200,
-              }}
-            >
-              <div style={{ padding: '6px 8px', borderBottom: '1px solid var(--border-subtle)', marginBottom: '4px' }}>
-                <div style={{ fontSize: '0.8125rem', fontWeight: 700, color: 'var(--text-primary)' }}>Nina Vance</div>
-                <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>nina@move.studio • Developer Pro</div>
+              <div
+                style={{
+                  width: '32px',
+                  height: '32px',
+                  borderRadius: '50%',
+                  background: 'linear-gradient(135deg, #0f766e 0%, #14b8a6 100%)',
+                  color: '#ffffff',
+                  fontWeight: 700,
+                  fontSize: '0.75rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  boxShadow: '0 1px 4px rgba(0,0,0,0.2)',
+                  fontFamily: 'var(--font-mono)',
+                }}
+              >
+                {user?.name
+                  ? user.name.split(' ').map((n) => n[0]).join('').substring(0, 2).toUpperCase()
+                  : user?.email
+                  ? user.email.substring(0, 2).toUpperCase()
+                  : 'US'}
               </div>
-              <Link
-                href="/account"
-                onClick={() => setShowUserDropdown(false)}
+              <ChevronDown size={12} color="var(--text-muted)" />
+            </button>
+
+            {showUserDropdown && (
+              <div
                 style={{
-                  display: 'block',
-                  padding: '6px 8px',
-                  borderRadius: '6px',
-                  fontSize: '0.78rem',
-                  color: 'var(--text-secondary)',
+                  position: 'absolute',
+                  top: '42px',
+                  right: 0,
+                  width: '230px',
+                  background: 'var(--surface-container-lowest, #090d16)',
+                  borderRadius: '10px',
+                  border: '1px solid var(--border-subtle, #1e293b)',
+                  boxShadow: 'var(--shadow-md)',
+                  padding: '10px',
+                  zIndex: 2000,
                 }}
               >
-                Account & Deploy Hub
-              </Link>
-              <Link
-                href="/audit"
-                onClick={() => setShowUserDropdown(false)}
-                style={{
-                  display: 'block',
-                  padding: '6px 8px',
-                  borderRadius: '6px',
-                  fontSize: '0.78rem',
-                  color: 'var(--text-secondary)',
-                }}
-              >
-                Security & Audit Suite
-              </Link>
-              <button
-                onClick={() => {
-                  setShowUserDropdown(false);
-                  if (isLoggedIn) logout();
-                  else openAuthModal();
-                }}
-                style={{
-                  width: '100%',
-                  textAlign: 'left',
-                  padding: '6px 8px',
-                  borderRadius: '6px',
-                  border: 'none',
-                  background: 'transparent',
-                  fontSize: '0.78rem',
-                  color: isLoggedIn ? 'var(--risk-critical)' : 'var(--primary)',
-                  fontWeight: 600,
-                }}
-              >
-                {isLoggedIn ? 'Sign Out' : 'Sign In / Register'}
-              </button>
-            </div>
-          )}
-        </div>
+                <div style={{ padding: '6px 8px', borderBottom: '1px solid var(--border-subtle, #1e293b)', marginBottom: '6px' }}>
+                  <div style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-primary, #ffffff)' }}>
+                    {user?.name || 'Copilot Developer'}
+                  </div>
+                  <div style={{ fontSize: '0.72rem', color: 'var(--text-muted, #94a3b8)', wordBreak: 'break-all' }}>
+                    {user?.email} • {user?.plan === 'developer' ? 'Pro Plan' : 'Free Tier'}
+                  </div>
+                </div>
+                <Link
+                  href="/account"
+                  onClick={() => setShowUserDropdown(false)}
+                  style={{
+                    display: 'block',
+                    padding: '6px 8px',
+                    borderRadius: '6px',
+                    fontSize: '0.78rem',
+                    color: 'var(--text-secondary, #cbd5e1)',
+                  }}
+                >
+                  Account & Deployment Hub
+                </Link>
+                <Link
+                  href="/drive"
+                  onClick={() => setShowUserDropdown(false)}
+                  style={{
+                    display: 'block',
+                    padding: '6px 8px',
+                    borderRadius: '6px',
+                    fontSize: '0.78rem',
+                    color: 'var(--text-secondary, #cbd5e1)',
+                  }}
+                >
+                  Contract Drive
+                </Link>
+                <button
+                  onClick={() => {
+                    setShowUserDropdown(false);
+                    logout();
+                  }}
+                  style={{
+                    width: '100%',
+                    textAlign: 'left',
+                    padding: '6px 8px',
+                    borderRadius: '6px',
+                    border: 'none',
+                    background: 'transparent',
+                    fontSize: '0.78rem',
+                    color: 'var(--risk-critical, #ef4444)',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    marginTop: '4px',
+                  }}
+                >
+                  Sign Out
+                </button>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </header>
   );
