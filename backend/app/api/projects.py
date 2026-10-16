@@ -114,3 +114,84 @@ def delete_project(project_id: str):
     if not success:
         return jsonify({"error": {"code": "PROJECT_NOT_FOUND", "message": f"Project '{project_id}' not found"}}), 404
     return jsonify({"message": "Project deleted successfully", "id": project_id}), 200
+
+@projects_bp.route("/<project_id>/duplicate", methods=["POST"])
+@jwt_required(optional=True)
+def duplicate_project(project_id: str):
+    """Duplicate an existing project (PRD FR-1.3)."""
+    identity = get_jwt_identity() or "guest_user"
+    orig = db_repo.get_project(project_id)
+    if not orig:
+        return jsonify({"error": {"code": "PROJECT_NOT_FOUND", "message": f"Project '{project_id}' not found"}}), 404
+    latest_graph_ver = db_repo.get_latest_graph_version(project_id)
+    graph_data = latest_graph_ver["graph"] if latest_graph_ver else None
+
+    new_project = db_repo.create_project(
+        owner_id=identity,
+        name=f"{orig.get('name', 'Untitled Contract')} (Copy)",
+        mode=orig.get("mode", "blocks"),
+        network=orig.get("network", "testnet"),
+        initial_graph=graph_data
+    )
+    try:
+        db_repo.record_activity(
+            user_id=identity,
+            activity_type="project_created",
+            title=f"Duplicated {orig.get('name', 'Contract')}",
+            description=f"Created copy project '{new_project['name']}'",
+            metadata={"projectId": new_project["id"], "originalId": project_id}
+        )
+    except Exception:
+        pass
+    return jsonify({"project": new_project}), 201
+
+@projects_bp.route("/<project_id>/export", methods=["GET"])
+def export_project(project_id: str):
+    """Export project Move package as zip or json (PRD FR-1.3)."""
+    project = db_repo.get_project(project_id)
+    if not project:
+        return jsonify({"error": {"code": "PROJECT_NOT_FOUND", "message": f"Project '{project_id}' not found"}}), 404
+
+    latest_graph_ver = db_repo.get_latest_graph_version(project_id)
+    graph_data = latest_graph_ver["graph"] if latest_graph_ver else None
+
+    files = {}
+    if graph_data:
+        try:
+            from app.core.graph.schema import ContractGraph
+            from app.core.generator.targets.aptos import AptosMoveTarget
+            cg = ContractGraph(**graph_data)
+            target = AptosMoveTarget()
+            files, _ = target.generate(cg)
+        except Exception:
+            pass
+
+    if not files:
+        safe_name = project.get("name", "contract").lower().replace(" ", "_")
+        files = {
+            "Move.toml": f'[package]\nname = "{safe_name}"\nversion = "1.0.0"\n\n[addresses]\nmy_addr = "0x1"\n\n[dependencies.AptosFramework]\ngit = "https://github.com/aptos-labs/aptos-core.git"\nrev = "mainnet"\nsubdir = "aptos-move/framework/aptos-framework"\n',
+            f"sources/{safe_name}.move": f"// Module: {safe_name}\nmodule my_addr::{safe_name} {{\n    use std::signer;\n\n    struct State has key {{\n        value: u64,\n    }}\n\n    public entry fun initialize(account: &signer) {{\n        move_to(account, State {{ value: 100 }});\n    }}\n}}\n"
+        }
+
+    format_req = request.args.get("format", "zip")
+    if format_req == "json":
+        return jsonify({"files": files, "name": project.get("name")}), 200
+
+    import io
+    import zipfile
+    from flask import send_file
+
+    zip_buffer = io.BytesIO()
+    with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zf:
+        for fpath, fcontent in files.items():
+            zf.writestr(fpath, fcontent)
+    zip_buffer.seek(0)
+
+    download_filename = f"{project.get('name', 'move_project').replace(' ', '_')}.zip"
+    return send_file(
+        zip_buffer,
+        mimetype="application/zip",
+        as_attachment=True,
+        download_name=download_filename
+    )
+

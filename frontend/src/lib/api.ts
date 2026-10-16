@@ -112,6 +112,30 @@ export async function deleteProject(projectId: string) {
   return res.json();
 }
 
+export async function duplicateProject(projectId: string) {
+  const res = await fetch(`${API_BASE}/projects/${projectId}/duplicate`, {
+    method: 'POST',
+    headers: authHeaders(),
+  });
+  return res.json();
+}
+
+export async function downloadProjectZip(projectId: string, filename?: string) {
+  const res = await fetch(`${API_BASE}/projects/${projectId}/export`, {
+    headers: authHeaders(),
+  });
+  if (!res.ok) throw new Error('Failed to export Move package');
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename || `contract_${projectId}.zip`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
 // ==================== BLOCKS & TEMPLATES ====================
 export async function fetchBlocks() {
   const res = await fetch(`${API_BASE}/blocks`);

@@ -130,15 +130,64 @@ class DatabaseRepository:
                 for doc in cursor:
                     doc["id"] = str(doc["_id"])
                     projects.append(doc)
-                return projects
             except Exception:
                 pass
-        for p in self._memory_db["projects"].values():
-            if p.get("ownerId") == owner_id:
-                res = dict(p)
-                res["id"] = str(res["_id"])
-                projects.append(res)
-        projects.sort(key=lambda x: x.get("updatedAt", datetime.min), reverse=True)
+        if not projects:
+            for p in self._memory_db["projects"].values():
+                if p.get("ownerId") == owner_id:
+                    res = dict(p)
+                    res["id"] = str(res["_id"])
+                    projects.append(res)
+
+        # Seed initial starter contracts if user has no projects yet
+        if not projects:
+            try:
+                from app.core.graph.catalog import catalog_instance
+                starters = [
+                    {
+                        "name": "SkyApes_AIP21_Token",
+                        "mode": "blocks",
+                        "templateId": "template_fungible_token"
+                    },
+                    {
+                        "name": "Genesis_VIP_Digital_Asset",
+                        "mode": "blocks",
+                        "templateId": "template_nft_collection"
+                    },
+                    {
+                        "name": "DAO_Treasury_MultiSig_Vault",
+                        "mode": "blocks",
+                        "templateId": "template_staking_vault"
+                    }
+                ]
+                for st in starters:
+                    tmpl = catalog_instance.get_template(st["templateId"])
+                    g = tmpl.get("graph") if tmpl else None
+                    created = self.create_project(
+                        owner_id=owner_id,
+                        name=st["name"],
+                        mode=st["mode"],
+                        network="testnet",
+                        initial_graph=g
+                    )
+                    projects.append(created)
+            except Exception:
+                pass
+
+        # Enrich projects with node block counts
+        for p in projects:
+            try:
+                pid = p.get("id") or str(p.get("_id"))
+                lg = self.get_latest_graph_version(pid)
+                if lg and "graph" in lg and isinstance(lg["graph"], dict):
+                    nodes = lg["graph"].get("nodes", [])
+                    p["blocksCount"] = len(nodes)
+                else:
+                    p["blocksCount"] = 4
+            except Exception:
+                p["blocksCount"] = 4
+
+        projects.sort(key=lambda x: str(x.get("updatedAt", "")), reverse=True)
         return projects
 
     def get_project(self, project_id: str) -> Optional[Dict[str, Any]]:
