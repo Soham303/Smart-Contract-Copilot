@@ -54,3 +54,35 @@ smart-contract-copilot/
 2. **Deterministic Over Generative:** Code generation, audits, gas measurements, and permissions are rule-based or measured. AI is never used to guess raw code.
 3. **Verified Pipeline:** One connected flow: Visual assembly -> Deterministic Move generation -> Compile -> Audit -> Measured Gas -> Permissions Matrix -> Wallet Deploy.
 4. **Learning Mode:** Every block teaches the underlying Move concept (resources, abilities, capabilities, signers).
+
+---
+
+## 🚀 Running the Project Locally
+
+### Prerequisites
+- Node.js 18+ & npm
+- Python 3.10+ & pip
+
+### Step 1: Start the Backend API (Terminal 1)
+```bash
+cd backend
+python3 run.py
+```
+> The API server will start on **`http://localhost:5000`** and automatically connects to MongoDB Atlas, Upstash Redis, and Google Gemini AI via `backend/.env`.
+
+### Step 2: Start the Next.js Frontend (Terminal 2)
+```bash
+cd frontend
+npm run dev
+```
+> The web application will launch at **`http://localhost:3000`**.
+
+### Running Tests
+- **Backend Test Suite (15 unit tests):**
+  ```bash
+  python3 -m pytest backend/tests
+  ```
+- **Frontend Production Build:**
+  ```bash
+  cd frontend && npm run build
+  ```
