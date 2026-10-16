@@ -17,6 +17,7 @@ export const Header: React.FC = () => {
     { label: 'Visual Builder', href: '/workspace/demo' },
     { label: 'Security & Audit', href: '/audit' },
     { label: 'Templates', href: '/templates' },
+    { label: 'Contract Drive', href: '/drive' },
     { label: 'Gas Optimization [Demo]', href: '/gas-optimizer' },
     { label: 'Market Radar', href: '/news' },
     { label: 'Account Hub', href: '/account' },
@@ -42,7 +43,7 @@ export const Header: React.FC = () => {
         padding: '0 1.5rem',
         position: 'sticky',
         top: 0,
-        zIndex: 100,
+        zIndex: 1000,
         boxShadow: 'var(--shadow-sm)',
       }}
     >

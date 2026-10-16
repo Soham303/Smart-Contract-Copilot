@@ -2,9 +2,15 @@
 
 import React from 'react';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { ShieldCheck, Cpu, Database } from 'lucide-react';
 
 export const Footer: React.FC = () => {
+  const pathname = usePathname();
+  if (pathname?.startsWith('/workspace')) {
+    return null;
+  }
+
   return (
     <footer
       style={{

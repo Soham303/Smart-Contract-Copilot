@@ -686,7 +686,7 @@ export default function WorkspacePage({ params }: { params: { projectId: string 
   };
 
   return (
-    <div style={{ height: 'calc(100vh - 64px)', display: 'flex', flexDirection: 'column', background: 'var(--surface)' }}>
+    <div style={{ height: 'calc(100vh - 64px)', display: 'flex', flexDirection: 'column', background: 'var(--surface)', overflow: 'hidden' }}>
       
       {/* --- Top Sub-Header / Command Bar --- */}
       <div
@@ -946,6 +946,36 @@ export default function WorkspacePage({ params }: { params: { projectId: string 
           >
             <ShieldCheck size={14} />
             Verify AST
+          </button>
+
+          {/* Eject to Monaco Code Editor */}
+          <button
+            onClick={() => {
+              if (canvasViewMode === 'monaco') {
+                setCanvasViewMode('canvas');
+              } else {
+                setIsEjectModalOpen(true);
+              }
+            }}
+            id="eject-editor-toolbar-btn"
+            style={{
+              background: canvasViewMode === 'monaco' ? 'var(--primary-container)' : 'var(--surface-container-low)',
+              color: canvasViewMode === 'monaco' ? 'var(--primary)' : 'var(--text-primary)',
+              border: `1px solid ${canvasViewMode === 'monaco' ? 'var(--primary)' : 'var(--border-subtle)'}`,
+              padding: '6px 12px',
+              borderRadius: '6px',
+              fontWeight: 600,
+              fontSize: '0.78rem',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              cursor: 'pointer',
+              transition: 'all 0.15s ease',
+            }}
+            title={canvasViewMode === 'monaco' ? 'Return to Visual Canvas' : 'Eject visual blocks into full Monaco Move editor'}
+          >
+            <Code2 size={14} color={canvasViewMode === 'monaco' ? 'var(--primary)' : '#0f766e'} />
+            <span>{canvasViewMode === 'monaco' ? 'Visual Canvas' : 'Eject to Editor'}</span>
           </button>
 
           {/* Teal Pre-Deploy Gate */}
