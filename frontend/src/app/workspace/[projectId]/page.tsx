@@ -127,13 +127,16 @@ export default function WorkspacePage({ params }: { params: { projectId: string 
   const [riskScore, setRiskScore] = useState<number>(100);
   const [riskBand, setRiskBand] = useState<'Low' | 'Moderate' | 'High'>('Low');
   const [findings, setFindings] = useState<AuditFinding[]>([]);
-  const [gasReport, setGasReport] = useState<GasReportData>({ entries: [], optimizations: [] });
-  const [permissionsData, setPermissionsData] = useState<PermissionsData>({
+  const EMPTY_GAS_REPORT: GasReportData = { entries: [], optimizations: [] };
+  const EMPTY_PERMISSIONS: PermissionsData = {
     matrix: [],
     keyAnswers: { whoCanMint: '', whoCanWithdraw: '', whoCanPause: '', canSupplyGrow: '', canContractBeUpgraded: '' },
     mutableParameters: [],
     fundsFlow: { inflow: '', outflow: '', controllers: [] },
-  });
+  };
+
+  const [gasReport, setGasReport] = useState<GasReportData>(EMPTY_GAS_REPORT);
+  const [permissionsData, setPermissionsData] = useState<PermissionsData>(EMPTY_PERMISSIONS);
 
   // Modals
   const [isPromptDrawerOpen, setIsPromptDrawerOpen] = useState(false);
@@ -256,43 +259,28 @@ export default function WorkspacePage({ params }: { params: { projectId: string 
     }, 5000);
   }, [getGraphObject, params.projectId, projectName]);
 
-  // Sub-500ms Verification & Generation Pipeline
+  // Sub-500ms Verification & Permissions Pipeline
   const triggerPipeline = useCallback(async (currentNodes: Node<BlockNodeData>[], currentEdges: Edge[]) => {
     scheduleAutosave(currentNodes, currentEdges);
-    const graph = getGraphObject(currentNodes, currentEdges);
-    setConsoleMsg('Verifying Move bytecode & invariants...');
-    try {
-      const [genRes, permRes] = await Promise.all([
-        generateCode(graph),
-        runPermissions(graph),
-      ]);
 
-      if (genRes.files) {
-        setGeneratedFiles(genRes.files);
-        setSourceMap(genRes.sourceMap || {});
-
-        const code = genRes.files[Object.keys(genRes.files)[1]] || genRes.files[Object.keys(genRes.files)[0]] || '';
-        if (code && typeof window !== 'undefined') {
-          localStorage.setItem('scc_latest_code', code);
-        }
-        const [auditRes, gasRes] = await Promise.all([
-          runAudit(code, graph),
-          runGasAnalysis(code),
-        ]);
-
-        if (auditRes.result) {
-          setRiskScore(auditRes.result.riskScore);
-          setRiskBand(auditRes.result.riskBand);
-          setFindings(auditRes.result.findings || []);
-        }
-
-        if (gasRes.result) {
-          setGasReport(gasRes.result);
-        }
-
-        setConsoleMsg(`100% Invariants Verified • ${auditRes.result?.findings?.length || 0} findings • Score: ${auditRes.result?.riskScore || 100}/100`);
+    // If canvas is cleared, immediately clear synthesized code and telemetry
+    if (!currentNodes || currentNodes.length === 0) {
+      setGeneratedFiles({});
+      setSourceMap({});
+      setFindings([]);
+      setPermissionsData(EMPTY_PERMISSIONS);
+      setGasReport(EMPTY_GAS_REPORT);
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('scc_latest_code');
       }
+      setConsoleMsg('Canvas cleared • Ready for new blocks');
+      return;
+    }
 
+    const graph = getGraphObject(currentNodes, currentEdges);
+    setConsoleMsg('Verifying Move block connectivity & capabilities...');
+    try {
+      const permRes = await runPermissions(graph);
       if (permRes.result) {
         setPermissionsData(permRes.result);
       }
@@ -703,13 +691,21 @@ export default function WorkspacePage({ params }: { params: { projectId: string 
   };
 
   const handleDownloadMoveFile = () => {
-    const code = generatedFiles[Object.keys(generatedFiles)[1]] || generatedFiles[Object.keys(generatedFiles)[0]] || '';
+    const code =
+      generatedFiles[Object.keys(generatedFiles).find((k) => k.endsWith('.move')) || ''] ||
+      generatedFiles[Object.keys(generatedFiles)[0]] ||
+      '';
+    if (!code) {
+      setConsoleMsg('Please click AI Synthesize Code first before downloading');
+      return;
+    }
     const blob = new Blob([code], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'SkyApes_Token_Vesting.move';
+    a.download = `${projectName.toLowerCase().replace(/[^a-zA-Z0-9_]/g, '_') || 'contract'}.move`;
     a.click();
+    URL.revokeObjectURL(url);
   };
 
   return (
@@ -1117,9 +1113,17 @@ export default function WorkspacePage({ params }: { params: { projectId: string 
               onClick={() => {
                 setNodes([]);
                 setEdges([]);
+                setGeneratedFiles({});
+                setSourceMap({});
+                setFindings([]);
+                setPermissionsData(EMPTY_PERMISSIONS);
+                setGasReport(EMPTY_GAS_REPORT);
+                if (typeof window !== 'undefined') {
+                  localStorage.removeItem('scc_latest_code');
+                }
                 pushHistory([], []);
                 triggerPipeline([], []);
-                setConsoleMsg('Canvas cleared');
+                setConsoleMsg('Canvas and synthesized code cleared');
               }}
               style={{
                 padding: '5px 10px',
@@ -1555,12 +1559,34 @@ export default function WorkspacePage({ params }: { params: { projectId: string 
                   }}
                   onEjectToEditor={() => setIsEjectModalOpen(true)}
                   graph={getGraphObject(nodes, edges)}
-                  onCodeGenerated={(newFiles, newSourceMap) => {
+                  onCodeGenerated={async (newFiles, newSourceMap) => {
                     setGeneratedFiles(newFiles);
                     if (newSourceMap) setSourceMap(newSourceMap);
-                    const code = newFiles[Object.keys(newFiles)[1]] || newFiles[Object.keys(newFiles)[0]] || '';
+                    const code =
+                      newFiles[Object.keys(newFiles).find((k) => k.endsWith('.move')) || ''] ||
+                      newFiles[Object.keys(newFiles)[0]] ||
+                      '';
                     if (code && typeof window !== 'undefined') {
                       localStorage.setItem('scc_latest_code', code);
+                    }
+                    try {
+                      const [auditRes, gasRes] = await Promise.all([
+                        runAudit(code, getGraphObject(nodes, edges)),
+                        runGasAnalysis(code),
+                      ]);
+                      if (auditRes.result) {
+                        setRiskScore(auditRes.result.riskScore);
+                        setRiskBand(auditRes.result.riskBand);
+                        setFindings(auditRes.result.findings || []);
+                      }
+                      if (gasRes.result) {
+                        setGasReport(gasRes.result);
+                      }
+                      setConsoleMsg(
+                        `AI Synthesized Move Code Verified • Score: ${auditRes.result?.riskScore || 100}/100 • Ready to deploy`
+                      );
+                    } catch (err) {
+                      console.warn('Audit after synthesis warning:', err);
                     }
                   }}
                 />
