@@ -244,7 +244,7 @@ export const LiveCodePanel: React.FC<LiveCodePanelProps> = ({
               }}
             >
               <Cpu size={12} />
-              {generationMeta?.model || 'Move AI Synthesizer'}
+              {'Move AI Synthesizer'}
             </span>
 
             {generationMeta?.durationMs && (
@@ -566,13 +566,13 @@ export const LiveCodePanel: React.FC<LiveCodePanelProps> = ({
                 background: isHighlighted
                   ? 'rgba(15, 118, 110, 0.25)'
                   : isSearchMatch
-                  ? 'rgba(234, 179, 8, 0.18)'
-                  : 'transparent',
+                    ? 'rgba(234, 179, 8, 0.18)'
+                    : 'transparent',
                 borderLeft: isHighlighted
                   ? '3px solid #2dd4bf'
                   : isSearchMatch
-                  ? '3px solid #eab308'
-                  : '3px solid transparent',
+                    ? '3px solid #eab308'
+                    : '3px solid transparent',
                 transition: 'background 0.15s ease',
               }}
             >

@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { buildDeployPayload, recordDeployment } from '../../lib/api';
+import { useWallet } from '../wallet/WalletContext';
 import {
   Rocket,
   ShieldCheck,
@@ -38,9 +39,16 @@ export const DeployModal: React.FC<DeployModalProps> = ({
   projectId = 'default_proj',
   files = {},
 }) => {
+  const {
+    walletAddress: contextWallet,
+    isConnected: isContextConnected,
+    connectWallet: connectViaContext,
+    setShowInstallModal,
+  } = useWallet();
+
   const [network, setNetwork] = useState('testnet');
-  const [connectedWallet, setConnectedWallet] = useState<string | null>(null);
-  const [walletName, setWalletName] = useState<string>('');
+  const [connectedWallet, setConnectedWallet] = useState<string | null>(contextWallet);
+  const [walletName, setWalletName] = useState<string>(contextWallet ? 'Petra Extension' : '');
   const [balanceApt, setBalanceApt] = useState<string>('0.00');
   const [isPetraInstalled, setIsPetraInstalled] = useState<boolean>(false);
   const [isDeploying, setIsDeploying] = useState(false);
@@ -101,9 +109,12 @@ export const DeployModal: React.FC<DeployModalProps> = ({
             await fetchAptBalance(address);
             return;
           }
+        } else {
+          setShowInstallModal(true);
+          return;
         }
       }
-      setConnectError('Petra Wallet extension was not detected. Please install Petra or use the pre-configured developer testnet account.');
+      setShowInstallModal(true);
     } catch (err: any) {
       console.warn('Petra connect error/cancelled:', err);
       setConnectError(err?.message || 'Connection request cancelled in Petra Wallet.');

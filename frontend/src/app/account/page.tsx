@@ -24,8 +24,18 @@ import {
   RefreshCw,
 } from 'lucide-react';
 import { fetchDeployments, fetchUserActivities } from '../../lib/api';
+import { useWallet } from '../../components/wallet/WalletContext';
 
 export default function AccountHubPage() {
+  const {
+    walletAddress: connectedAddress,
+    shortAddress,
+    isConnected,
+    balanceApt,
+    connectWallet,
+    refreshBalance,
+  } = useWallet();
+
   const [faucetLoading, setFaucetLoading] = useState(false);
   const [balance, setBalance] = useState(42.5);
   const [walletAddress, setWalletAddress] = useState('0x7a39...e91b');
@@ -266,20 +276,20 @@ export default function AccountHubPage() {
                 <div style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
                   CONNECTED APTOS WALLET
                 </div>
-                <div style={{ fontSize: '0.85rem', fontWeight: 700, fontFamily: 'var(--font-mono)', color: 'var(--primary)' }}>
-                  {walletAddress} (Aptos Testnet)
+                <div style={{ fontSize: '0.85rem', fontWeight: 700, fontFamily: 'var(--font-mono)', color: isConnected ? 'var(--primary)' : 'var(--text-muted)' }}>
+                  {isConnected ? `${shortAddress} (Aptos Testnet)` : 'Not Connected'}
                 </div>
               </div>
               <button
-                onClick={handleConnectWallet}
+                onClick={() => connectWallet()}
                 style={{
                   padding: '4px 8px',
                   borderRadius: '4px',
                   border: '1px solid var(--border-subtle)',
-                  background: '#ffffff',
+                  background: isConnected ? 'var(--surface)' : 'var(--primary)',
                   fontSize: '0.72rem',
                   fontWeight: 600,
-                  color: 'var(--primary)',
+                  color: isConnected ? 'var(--text-secondary)' : '#ffffff',
                   cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
@@ -287,7 +297,7 @@ export default function AccountHubPage() {
                 }}
               >
                 <Wallet size={12} />
-                Connect
+                {isConnected ? 'Change' : 'Connect Petra'}
               </button>
             </div>
 
@@ -295,7 +305,7 @@ export default function AccountHubPage() {
               <div>
                 <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Testnet Balance</span>
                 <div style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-primary)' }}>
-                  {balance.toFixed(2)} <span style={{ fontSize: '0.8rem', color: 'var(--primary)' }}>APT</span>
+                  {isConnected ? balanceApt : balance.toFixed(2)} <span style={{ fontSize: '0.8rem', color: 'var(--primary)' }}>APT</span>
                 </div>
               </div>
 

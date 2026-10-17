@@ -1,9 +1,11 @@
 import type { Metadata } from 'next';
 import '../styles/globals.css';
 import { AuthProvider } from '../components/auth/AuthContext';
+import { WalletProvider } from '../components/wallet/WalletContext';
 import { Header } from '../components/common/Header';
 import { Footer } from '../components/common/Footer';
 import { AuthModal } from '../components/auth/AuthModal';
+import { PetraInstallModal } from '../components/wallet/PetraInstallModal';
 
 export const metadata: Metadata = {
   title: 'Smart Contract Copilot • Move Studio Pristine',
@@ -27,12 +29,15 @@ export default function RootLayout({
       </head>
       <body>
         <AuthProvider>
-          <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', background: 'var(--surface)' }}>
-            <Header />
-            <main style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>{children}</main>
-            <Footer />
-          </div>
-          <AuthModal />
+          <WalletProvider>
+            <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', background: 'var(--surface)' }}>
+              <Header />
+              <main style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>{children}</main>
+              <Footer />
+            </div>
+            <AuthModal />
+            <PetraInstallModal />
+          </WalletProvider>
         </AuthProvider>
       </body>
     </html>

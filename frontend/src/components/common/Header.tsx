@@ -4,13 +4,26 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '../auth/AuthContext';
-import { Bell, ShieldCheck, Zap, ChevronDown } from 'lucide-react';
+import { useWallet } from '../wallet/WalletContext';
+import { Bell, ShieldCheck, Zap, ChevronDown, Wallet, Copy, Check, ExternalLink, LogOut } from 'lucide-react';
 
 export const Header: React.FC = () => {
   const pathname = usePathname();
   const { user, isLoggedIn, logout, openAuthModal } = useAuth();
-  const [walletConnected, setWalletConnected] = useState<string>('0x7a3...e91b');
+  const {
+    walletAddress,
+    shortAddress,
+    isConnected,
+    isConnecting,
+    connectWallet,
+    disconnectWallet,
+    balanceApt,
+    network,
+  } = useWallet();
+
   const [showUserDropdown, setShowUserDropdown] = useState(false);
+  const [showWalletDropdown, setShowWalletDropdown] = useState(false);
+  const [copiedWallet, setCopiedWallet] = useState(false);
 
   const navLinks = [
     { label: 'Overview', href: '/' },
@@ -22,14 +35,6 @@ export const Header: React.FC = () => {
     { label: 'Market Radar', href: '/news' },
     { label: 'Account Hub', href: '/account' },
   ];
-
-  const handleWalletToggle = () => {
-    if (walletConnected) {
-      setWalletConnected('');
-    } else {
-      setWalletConnected('0x7a3...e91b');
-    }
-  };
 
   return (
     <header
@@ -149,29 +154,179 @@ export const Header: React.FC = () => {
           Aptos Testnet
         </div>
 
-        {/* Connected Petra Wallet Pill */}
-        <button
-          onClick={handleWalletToggle}
-          id="petra-wallet-btn"
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px',
-            padding: '5px 12px',
-            borderRadius: '9999px',
-            background: walletConnected ? 'var(--surface-container-low)' : 'var(--primary)',
-            border: `1px solid ${walletConnected ? 'var(--border-subtle)' : 'var(--primary)'}`,
-            color: walletConnected ? 'var(--text-primary)' : '#ffffff',
-            fontSize: '0.75rem',
-            fontFamily: 'var(--font-mono)',
-            fontWeight: 600,
-            transition: 'all 0.15s ease',
-          }}
-          title={walletConnected ? 'Click to toggle wallet state' : 'Connect Petra Wallet'}
-        >
-          <ShieldCheck size={14} color={walletConnected ? 'var(--security-emerald)' : '#ffffff'} />
-          {walletConnected ? `Petra (${walletConnected})` : 'Connect Petra'}
-        </button>
+        {/* Real Petra Wallet Integration */}
+        {isConnected ? (
+          <div style={{ position: 'relative' }}>
+            <button
+              onClick={() => setShowWalletDropdown(!showWalletDropdown)}
+              id="petra-wallet-btn"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '5px 12px',
+                borderRadius: '9999px',
+                background: 'var(--surface-container-low)',
+                border: '1px solid var(--border-subtle)',
+                color: 'var(--text-primary)',
+                fontSize: '0.75rem',
+                fontFamily: 'var(--font-mono)',
+                fontWeight: 600,
+                cursor: 'pointer',
+                transition: 'all 0.15s ease',
+              }}
+              title="Click to view connected wallet details or disconnect"
+            >
+              <ShieldCheck size={14} color="var(--security-emerald)" />
+              Petra ({shortAddress})
+              <ChevronDown size={12} color="var(--text-muted)" />
+            </button>
+
+            {showWalletDropdown && (
+              <div
+                style={{
+                  position: 'absolute',
+                  right: 0,
+                  top: 'calc(100% + 8px)',
+                  width: '300px',
+                  background: '#ffffff',
+                  border: '1px solid var(--border-subtle)',
+                  borderRadius: '12px',
+                  padding: '16px',
+                  boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.15), 0 0 1px rgba(0, 0, 0, 0.1)',
+                  zIndex: 1200,
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#059669' }} />
+                    <span style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--text-primary)' }}>
+                      Petra Aptos Wallet
+                    </span>
+                  </div>
+                  <span
+                    style={{
+                      fontSize: '0.6875rem',
+                      fontFamily: 'var(--font-mono)',
+                      background: 'var(--surface-container-low)',
+                      color: 'var(--primary)',
+                      padding: '2px 6px',
+                      borderRadius: '4px',
+                      fontWeight: 600,
+                    }}
+                  >
+                    {network.toUpperCase()}
+                  </span>
+                </div>
+
+                <div
+                  style={{
+                    background: 'var(--surface-container-low)',
+                    padding: '8px 10px',
+                    borderRadius: '8px',
+                    marginBottom: '12px',
+                  }}
+                >
+                  <div style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)', marginBottom: '4px' }}>
+                    ACCOUNT ADDRESS
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <span style={{ fontSize: '0.78rem', fontFamily: 'var(--font-mono)', fontWeight: 600, color: 'var(--text-primary)' }}>
+                      {shortAddress}
+                    </span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <button
+                        onClick={() => {
+                          if (walletAddress) {
+                            navigator.clipboard.writeText(walletAddress);
+                            setCopiedWallet(true);
+                            setTimeout(() => setCopiedWallet(false), 2000);
+                          }
+                        }}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          cursor: 'pointer',
+                          padding: '2px 4px',
+                          color: 'var(--text-muted)',
+                        }}
+                        title="Copy full address"
+                      >
+                        {copiedWallet ? <Check size={13} color="#059669" /> : <Copy size={13} />}
+                      </button>
+                      <a
+                        href={`https://explorer.aptoslabs.com/account/${walletAddress}?network=testnet`}
+                        target="_blank"
+                        rel="noreferrer"
+                        style={{ color: 'var(--primary)', display: 'inline-flex', padding: '2px' }}
+                        title="View on Aptos Explorer"
+                      >
+                        <ExternalLink size={13} />
+                      </a>
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', padding: '0 4px' }}>
+                  <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>Testnet Balance</span>
+                  <span style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--text-primary)' }}>
+                    {balanceApt} <span style={{ fontSize: '0.75rem', color: 'var(--primary)' }}>APT</span>
+                  </span>
+                </div>
+
+                <button
+                  onClick={() => {
+                    disconnectWallet();
+                    setShowWalletDropdown(false);
+                  }}
+                  style={{
+                    width: '100%',
+                    padding: '8px',
+                    borderRadius: '6px',
+                    border: '1px solid #fee2e2',
+                    background: '#fef2f2',
+                    color: '#dc2626',
+                    fontSize: '0.78rem',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '6px',
+                  }}
+                >
+                  <LogOut size={13} />
+                  Disconnect Wallet
+                </button>
+              </div>
+            )}
+          </div>
+        ) : (
+          <button
+            onClick={() => connectWallet()}
+            disabled={isConnecting}
+            id="petra-wallet-btn"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '6px 14px',
+              borderRadius: '9999px',
+              background: 'var(--primary)',
+              border: 'none',
+              color: '#ffffff',
+              fontSize: '0.78rem',
+              fontWeight: 700,
+              cursor: 'pointer',
+              boxShadow: 'var(--shadow-sm)',
+              transition: 'all 0.15s ease',
+            }}
+            title="Connect Petra Wallet Extension"
+          >
+            <Wallet size={14} />
+            {isConnecting ? 'Connecting...' : 'Connect Petra'}
+          </button>
+        )}
 
         {/* Notification Bell */}
         <button

@@ -114,8 +114,13 @@ class DatabaseRepository:
         if self.is_mongo_connected:
             try:
                 extensions.db.users.insert_one(dict(user_doc))
-            except Exception:
-                pass
+                # Automatically claim any unassigned guest projects for the newly registered user
+                extensions.db.projects.update_many(
+                    {"ownerId": "guest_user"},
+                    {"$set": {"ownerId": user_id}}
+                )
+            except Exception as e:
+                print(f"MongoDB insert user error: {e}")
         self._memory_db["users"][user_id] = user_doc
         res = dict(user_doc)
         res["id"] = user_id
@@ -126,12 +131,20 @@ class DatabaseRepository:
         projects = []
         if self.is_mongo_connected:
             try:
+                # If authenticated user has no projects yet, claim any unassigned guest_user projects
+                if owner_id != "guest_user":
+                    user_proj_count = extensions.db.projects.count_documents({"ownerId": owner_id})
+                    if user_proj_count == 0:
+                        extensions.db.projects.update_many(
+                            {"ownerId": "guest_user"},
+                            {"$set": {"ownerId": owner_id}}
+                        )
                 cursor = extensions.db.projects.find({"ownerId": owner_id}).sort("updatedAt", -1)
                 for doc in cursor:
                     doc["id"] = str(doc["_id"])
                     projects.append(doc)
-            except Exception:
-                pass
+            except Exception as e:
+                print(f"Error querying projects: {e}")
         if not projects:
             for p in self._memory_db["projects"].values():
                 if p.get("ownerId") == owner_id:

@@ -70,20 +70,24 @@ def get_project(project_id: str):
     return jsonify({"project": result}), 200
 
 @projects_bp.route("/<project_id>", methods=["PUT"])
+@jwt_required(optional=True)
 def update_project(project_id: str):
     """Save/update project state and canvas autosave (PRD FR-1.4)."""
+    identity = get_jwt_identity() or "guest_user"
     data = request.get_json() or {}
     project = db_repo.get_project(project_id)
 
     # Allow autosave even if project is created on the fly
     if not project:
         project = db_repo.create_project(
-            owner_id="guest_user",
+            owner_id=identity,
             name=data.get("name", "My Project"),
             mode=data.get("mode", "blocks"),
             network=data.get("network", "testnet")
         )
         project_id = project["id"]
+    elif identity != "guest_user" and project.get("ownerId") == "guest_user":
+        db_repo.update_project(project_id, {"ownerId": identity})
 
     updates = {}
     if "name" in data:

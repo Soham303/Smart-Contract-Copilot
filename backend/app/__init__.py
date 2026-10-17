@@ -13,6 +13,10 @@ def create_app(config_class=Config):
     # Initialize extensions
     init_extensions(app)
 
+    # Ensure MongoDB indexes are configured
+    from app.core.db.repository import db_repo
+    db_repo.ensure_indexes()
+
     # Register API Blueprints (PRD Section 15)
     from app.api.auth import auth_bp
     from app.api.projects import projects_bp
