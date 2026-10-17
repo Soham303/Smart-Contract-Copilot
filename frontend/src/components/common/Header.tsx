@@ -2,13 +2,14 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '../auth/AuthContext';
 import { useWallet } from '../wallet/WalletContext';
 import { Bell, ShieldCheck, Zap, ChevronDown, Wallet, Copy, Check, ExternalLink, LogOut } from 'lucide-react';
 
 export const Header: React.FC = () => {
   const pathname = usePathname();
+  const router = useRouter();
   const { user, isLoggedIn, logout, openAuthModal } = useAuth();
   const {
     walletAddress,
@@ -55,21 +56,18 @@ export const Header: React.FC = () => {
       {/* Left: Brand Identity + Contextual Module Indicator */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
         <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <div
+          <img
+            src="https://res.cloudinary.com/dmgjftmqa/image/upload/v1792224817/logo_lxnu5d.png"
+            alt="Smart Contract Copilot Logo"
             style={{
               width: '32px',
               height: '32px',
-              borderRadius: '8px',
-              background: 'linear-gradient(135deg, #0f766e 0%, #042f2e 100%)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: '#ffffff',
-              boxShadow: '0 2px 4px rgba(15, 118, 110, 0.2)',
+              objectFit: 'contain',
+              display: 'block',
+              flexShrink: 0,
             }}
-          >
-            <Zap size={18} fill="#ffffff" />
-          </div>
+          />
+
           <span
             style={{
               fontWeight: 800,
@@ -403,8 +401,8 @@ export const Header: React.FC = () => {
                 {user?.name
                   ? user.name.split(' ').map((n) => n[0]).join('').substring(0, 2).toUpperCase()
                   : user?.email
-                  ? user.email.substring(0, 2).toUpperCase()
-                  : 'US'}
+                    ? user.email.substring(0, 2).toUpperCase()
+                    : 'US'}
               </div>
               <ChevronDown size={12} color="var(--text-muted)" />
             </button>
@@ -462,6 +460,7 @@ export const Header: React.FC = () => {
                   onClick={() => {
                     setShowUserDropdown(false);
                     logout();
+                    router.push('/');
                   }}
                   style={{
                     width: '100%',

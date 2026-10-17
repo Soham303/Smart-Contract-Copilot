@@ -1,6 +1,12 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import {
+  initWalletStandardListeners,
+  detectPetraWallet,
+  getPetraProvider,
+  UnifiedPetraWallet,
+} from '../../lib/petraWallet';
 
 interface WalletContextType {
   walletAddress: string | null;
@@ -29,11 +35,12 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [showInstallModal, setShowInstallModal] = useState<boolean>(false);
 
   // Check if Petra is installed in the browser window
-  const checkPetraInstalled = useCallback((): boolean => {
+  const checkPetraInstalled = useCallback(async (): Promise<boolean> => {
     if (typeof window === 'undefined') return false;
-    const isInstalled = Boolean((window as any).aptos || (window as any).petra);
-    setIsPetraInstalled(isInstalled);
-    return isInstalled;
+    const provider = await detectPetraWallet(400);
+    const installed = Boolean(provider);
+    setIsPetraInstalled(installed);
+    return installed;
   }, []);
 
   // Fetch real on-chain balance for the Aptos address
@@ -60,6 +67,7 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   // Check on mount & listen for Petra injection
   useEffect(() => {
+    initWalletStandardListeners();
     checkPetraInstalled();
 
     // Check if user previously connected a wallet
@@ -75,7 +83,7 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     // Petra may inject asynchronously
     const timer = setTimeout(() => {
       checkPetraInstalled();
-    }, 500);
+    }, 600);
 
     return () => clearTimeout(timer);
   }, [checkPetraInstalled, fetchBalance]);
@@ -86,7 +94,8 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     try {
       if (typeof window === 'undefined') return false;
 
-      const petra = (window as any).aptos || (window as any).petra;
+      // Detect provider with up to 1.5s tolerance to handle extension injection
+      const petra = await detectPetraWallet(1500);
 
       // If Petra extension is not detected in browser
       if (!petra) {
@@ -109,7 +118,7 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       // Check current network
       try {
         const net = await petra.network();
-        const netName = typeof net === 'string' ? net : net?.name || 'testnet';
+        const netName = typeof net === 'string' ? net : (net as any)?.name || 'testnet';
         setNetwork(netName.toLowerCase());
       } catch {
         setNetwork('testnet');
@@ -135,11 +144,11 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   // Disconnect wallet
   const disconnectWallet = () => {
     try {
+      const petra = getPetraProvider();
+      if (petra) {
+        petra.disconnect();
+      }
       if (typeof window !== 'undefined') {
-        const petra = (window as any).aptos || (window as any).petra;
-        if (petra && typeof petra.disconnect === 'function') {
-          petra.disconnect();
-        }
         localStorage.removeItem('scc_wallet_addr');
         localStorage.removeItem('scc_wallet_connected');
         localStorage.removeItem('scc_wallet_bal');

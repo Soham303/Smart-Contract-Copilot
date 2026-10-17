@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { buildDeployPayload, recordDeployment } from '../../lib/api';
 import { useWallet } from '../wallet/WalletContext';
+import { detectPetraWallet, getPetraProvider } from '../../lib/petraWallet';
 import {
   Rocket,
   ShieldCheck,
@@ -64,13 +65,14 @@ export const DeployModal: React.FC<DeployModalProps> = ({
   // Check for Petra Wallet extension on mount & when opened
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const aptos = (window as any).aptos || (window as any).petra;
-      if (aptos) {
-        setIsPetraInstalled(true);
-        setWalletName('Petra Aptos Wallet');
-      } else {
-        setIsPetraInstalled(false);
-      }
+      detectPetraWallet(600).then((wallet) => {
+        if (wallet) {
+          setIsPetraInstalled(true);
+          setWalletName(wallet.name || 'Petra Aptos Wallet');
+        } else {
+          setIsPetraInstalled(false);
+        }
+      });
     }
   }, [isOpen]);
 
@@ -98,11 +100,11 @@ export const DeployModal: React.FC<DeployModalProps> = ({
     setConnectError(null);
     try {
       if (typeof window !== 'undefined') {
-        const wallet = (window as any).aptos || (window as any).petra;
+        const wallet = await detectPetraWallet(1200);
         if (wallet) {
           // Trigger actual Petra Wallet connection popup window
           const response = await wallet.connect();
-          const address = response?.address || response?.account?.address;
+          const address = response?.address;
           if (address) {
             setConnectedWallet(address);
             setWalletName('Petra Extension');
@@ -142,7 +144,7 @@ export const DeployModal: React.FC<DeployModalProps> = ({
       setDeployStep('Submitting transaction payload to Aptos Testnet validators...');
 
       let txHash = '';
-      const wallet = typeof window !== 'undefined' ? ((window as any).aptos || (window as any).petra) : null;
+      const wallet = getPetraProvider();
 
       if (wallet && walletName.includes('Extension')) {
         try {
