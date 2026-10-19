@@ -280,9 +280,37 @@ export async function recordDeployment(data: { projectId: string; network: strin
   return res.json();
 }
 
+export async function publishContract(data: {
+  projectId: string;
+  files: Record<string, string>;
+  network: string;
+  address?: string;
+  moduleName?: string;
+}) {
+  const res = await fetch(`${API_BASE}/deploy/publish`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify(data),
+  });
+  return res.json();
+}
+
 export async function fetchDeployments(projectId?: string) {
   const url = projectId ? `${API_BASE}/deploy/history?projectId=${encodeURIComponent(projectId)}` : `${API_BASE}/deploy/history`;
   const res = await fetch(url, {
+    headers: authHeaders(),
+  });
+  return res.json();
+}
+
+// ==================== LOGS ====================
+export async function fetchSystemLogs(category?: string, projectId?: string, limit = 100) {
+  const params = new URLSearchParams();
+  if (category) params.append('category', category);
+  if (projectId) params.append('projectId', projectId);
+  params.append('limit', String(limit));
+
+  const res = await fetch(`${API_BASE}/auth/logs?${params.toString()}`, {
     headers: authHeaders(),
   });
   return res.json();

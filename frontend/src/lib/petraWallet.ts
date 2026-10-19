@@ -1,11 +1,12 @@
 'use client';
 
 /**
- * Robust Aptos / Petra Wallet Adapter
- * Supports both:
- * 1. AIP-62 Modern Wallet Standard (event-based discovery: wallet-standard:register-wallet / wallet-standard:app-ready)
- * 2. Legacy window injections (window.aptos, window.petra, etc.)
- * Includes asynchronous detection & polling to avoid extension injection race conditions.
+ * Bulletproof Aptos / Petra Wallet Adapter
+ * Prioritizes:
+ * 1. Direct window.aptos / window.petra (official Petra extension API)
+ * 2. Window event "aptos#initialized" listener
+ * 3. AIP-62 Modern Wallet Standard
+ * Includes responsive asynchronous polling to handle extension content script injection.
  */
 
 export interface UnifiedPetraWallet {
@@ -16,6 +17,7 @@ export interface UnifiedPetraWallet {
   account: () => Promise<{ address: string } | null>;
   network: () => Promise<string>;
   signAndSubmitTransaction: (transaction: any) => Promise<{ hash: string }>;
+  isConnected?: () => Promise<boolean>;
 }
 
 let standardWalletInstance: any = null;
@@ -29,13 +31,12 @@ export function initWalletStandardListeners(): void {
   const handleRegister = (wallet: any) => {
     if (!wallet) return;
     const name = String(wallet.name || '').toLowerCase();
-    // Accept Petra or any Aptos-compatible standard wallet
     if (name.includes('petra') || name.includes('aptos') || !standardWalletInstance) {
       standardWalletInstance = wallet;
     }
   };
 
-  // 1. Listen for wallets registering dynamically
+  // 1. Listen for standard wallets registering dynamically
   window.addEventListener('wallet-standard:register-wallet', (event: any) => {
     try {
       if (typeof event?.detail === 'function') {
@@ -48,7 +49,7 @@ export function initWalletStandardListeners(): void {
     }
   });
 
-  // 2. Announce app ready so already-injected wallets register
+  // 2. Announce app ready
   dispatchAppReady(handleRegister);
 }
 
@@ -67,8 +68,8 @@ function dispatchAppReady(registerCallback: (wallet: any) => void): void {
   }
 }
 
-// Check legacy window objects
-function getLegacyPetra(): any {
+// Check window.aptos or window.petra directly
+function getWindowAptos(): any {
   if (typeof window === 'undefined') return null;
   const w = window as any;
   return w.aptos || w.petra || w.petraWallet || w.martian || w.pontem || null;
@@ -81,7 +82,79 @@ function getLegacyPetra(): any {
 export function getPetraProvider(): UnifiedPetraWallet | null {
   if (typeof window === 'undefined') return null;
 
-  // 1. Check AIP-62 standard wallet instance
+  // 1. PRIORITY 1: Check native window.aptos (Official Petra Extension)
+  const legacy = getWindowAptos();
+  if (legacy && (typeof legacy.connect === 'function' || typeof legacy.account === 'function')) {
+    return {
+      name: legacy.isPetra ? 'Petra Wallet' : 'Petra Aptos Wallet',
+      isStandard: false,
+      connect: async () => {
+        let res: any;
+        try {
+          res = await legacy.connect();
+        } catch (err: any) {
+          // If already connected, query account directly
+          if (typeof legacy.isConnected === 'function') {
+            const isConn = await legacy.isConnected();
+            if (isConn && typeof legacy.account === 'function') {
+              res = await legacy.account();
+            } else {
+              throw err;
+            }
+          } else {
+            throw err;
+          }
+        }
+
+        let address = res?.address;
+        if (!address && typeof legacy.account === 'function') {
+          const acc = await legacy.account();
+          address = acc?.address;
+        }
+
+        if (!address) {
+          throw new Error('No account address returned from Petra Wallet');
+        }
+
+        return { address, publicKey: res?.publicKey };
+      },
+      disconnect: async () => {
+        if (typeof legacy.disconnect === 'function') {
+          await legacy.disconnect();
+        }
+      },
+      account: async () => {
+        if (typeof legacy.account === 'function') {
+          return await legacy.account();
+        }
+        return null;
+      },
+      network: async () => {
+        try {
+          if (typeof legacy.network === 'function') {
+            const net = await legacy.network();
+            return typeof net === 'string' ? net : net?.name || 'testnet';
+          }
+        } catch {}
+        return 'testnet';
+      },
+      signAndSubmitTransaction: async (transaction: any) => {
+        if (typeof legacy.signAndSubmitTransaction === 'function') {
+          const res = await legacy.signAndSubmitTransaction(transaction);
+          return { hash: res?.hash || '' };
+        }
+        throw new Error('signAndSubmitTransaction not supported on provider');
+      },
+      isConnected: async () => {
+        if (typeof legacy.isConnected === 'function') {
+          return await legacy.isConnected();
+        }
+        return Boolean(legacy.account);
+      },
+    };
+  }
+
+  // 2. PRIORITY 2: Check AIP-62 standard wallet instance
   if (standardWalletInstance) {
     const sw = standardWalletInstance;
     return {
@@ -141,49 +214,7 @@ export function getPetraProvider(): UnifiedPetraWallet | null {
           });
           return { hash: res?.hash || res?.txnHash || '' };
         }
-        throw new Error('Transaction signing not supported by this wallet standard interface');
-      },
-    };
-  }
-
-  // 2. Check legacy window objects
-  const legacy = getLegacyPetra();
-  if (legacy) {
-    return {
-      name: legacy.isPetra ? 'Petra Wallet' : 'Aptos Wallet',
-      isStandard: false,
-      connect: async () => {
-        const res = await legacy.connect();
-        const address = res?.address || (await legacy.account?.())?.address;
-        if (!address) throw new Error('No account address returned from legacy wallet');
-        return { address, publicKey: res?.publicKey };
-      },
-      disconnect: async () => {
-        if (typeof legacy.disconnect === 'function') {
-          await legacy.disconnect();
-        }
-      },
-      account: async () => {
-        if (typeof legacy.account === 'function') {
-          return await legacy.account();
-        }
-        return null;
-      },
-      network: async () => {
-        try {
-          if (typeof legacy.network === 'function') {
-            const net = await legacy.network();
-            return typeof net === 'string' ? net : net?.name || 'testnet';
-          }
-        } catch {}
-        return 'testnet';
-      },
-      signAndSubmitTransaction: async (transaction: any) => {
-        if (typeof legacy.signAndSubmitTransaction === 'function') {
-          const res = await legacy.signAndSubmitTransaction(transaction);
-          return { hash: res?.hash || '' };
-        }
-        throw new Error('signAndSubmitTransaction not supported on legacy provider');
+        throw new Error('Transaction signing not supported by this standard wallet interface');
       },
     };
   }
@@ -195,7 +226,7 @@ export function getPetraProvider(): UnifiedPetraWallet | null {
  * Asynchronously detects Petra / Aptos wallet with retries
  * to handle extension script injection delay.
  */
-export async function detectPetraWallet(maxWaitMs = 1200): Promise<UnifiedPetraWallet | null> {
+export async function detectPetraWallet(maxWaitMs = 2000): Promise<UnifiedPetraWallet | null> {
   if (typeof window === 'undefined') return null;
 
   initWalletStandardListeners();
@@ -203,15 +234,25 @@ export async function detectPetraWallet(maxWaitMs = 1200): Promise<UnifiedPetraW
   const provider = getPetraProvider();
   if (provider) return provider;
 
-  // Poll every 80ms until maxWaitMs
-  const interval = 80;
+  // Poll every 50ms until maxWaitMs
+  const interval = 50;
   let elapsed = 0;
 
   return new Promise((resolve) => {
+    // Listen for Petra injection event
+    const onInitialized = () => {
+      const p = getPetraProvider();
+      if (p) {
+        window.removeEventListener('aptos#initialized', onInitialized);
+        clearInterval(timer);
+        resolve(p);
+      }
+    };
+    window.addEventListener('aptos#initialized', onInitialized, { once: true });
+
     const timer = setInterval(() => {
       elapsed += interval;
-      // Re-dispatch app-ready periodically to trigger late-injected extensions
-      if (elapsed % 240 === 0) {
+      if (elapsed % 200 === 0) {
         dispatchAppReady((wallet: any) => {
           if (wallet) standardWalletInstance = wallet;
         });
@@ -219,12 +260,14 @@ export async function detectPetraWallet(maxWaitMs = 1200): Promise<UnifiedPetraW
 
       const p = getPetraProvider();
       if (p) {
+        window.removeEventListener('aptos#initialized', onInitialized);
         clearInterval(timer);
         resolve(p);
         return;
       }
 
       if (elapsed >= maxWaitMs) {
+        window.removeEventListener('aptos#initialized', onInitialized);
         clearInterval(timer);
         resolve(null);
       }

@@ -29,6 +29,21 @@ def register():
     pwd_hash = hash_password(password)
     user = db_repo.create_user(email, pwd_hash, name=name, plan="free")
 
+    # Record registration activity and audit log in MongoDB Atlas
+    db_repo.record_activity(
+        user_id=user["id"],
+        action="USER_REGISTERED",
+        title=f"New user registered: {email}",
+        details={"email": email, "name": name, "plan": "free", "storage": "MongoDB Atlas"}
+    )
+    db_repo.record_log(
+        level="INFO",
+        category="AUTH",
+        message=f"User {email} successfully registered into MongoDB Atlas database",
+        metadata={"userId": user["id"], "email": email, "plan": "free"},
+        user_id=user["id"]
+    )
+
     access_token = create_access_token(identity=user["id"])
     refresh_token = create_refresh_token(identity=user["id"])
 
@@ -66,6 +81,21 @@ def login():
 
     access_token = create_access_token(identity=user["id"])
     refresh_token = create_refresh_token(identity=user["id"])
+
+    # Record login activity and log in MongoDB Atlas
+    db_repo.record_activity(
+        user_id=user["id"],
+        action="USER_LOGIN",
+        title=f"User logged in: {email}",
+        details={"email": email, "name": user.get("name", "")}
+    )
+    db_repo.record_log(
+        level="INFO",
+        category="AUTH",
+        message=f"User {email} authenticated session via JWT",
+        metadata={"userId": user["id"], "email": email},
+        user_id=user["id"]
+    )
 
     return jsonify({
         "message": "Login successful",
@@ -118,4 +148,19 @@ def get_user_activity():
     return jsonify({
         "activities": activities,
         "count": len(activities)
+    }), 200
+
+@auth_bp.route("/logs", methods=["GET"])
+@jwt_required(optional=True)
+def get_system_logs():
+    """Get chronological system, compiler, audit, and deployment log history from MongoDB Atlas."""
+    identity = get_jwt_identity() or "usr_demo"
+    category = request.args.get("category")
+    project_id = request.args.get("projectId")
+    limit = int(request.args.get("limit", "100"))
+    logs = db_repo.list_logs(user_id=identity, project_id=project_id, category=category, limit=limit)
+    return jsonify({
+        "logs": logs,
+        "count": len(logs),
+        "database": "MongoDB Atlas" if db_repo.is_mongo_connected else "in-memory fallback"
     }), 200

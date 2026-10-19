@@ -193,21 +193,27 @@ export const PetraInstallModal: React.FC = () => {
           style={{
             width: '100%',
             display: 'flex',
+            flexDirection: 'column',
             alignItems: 'center',
             justifyContent: 'center',
-            gap: '8px',
-            padding: '10px 14px',
-            borderRadius: '8px',
-            background: 'rgba(255, 255, 255, 0.03)',
-            border: '1px solid rgba(100, 116, 139, 0.3)',
-            color: '#94a3b8',
-            fontSize: '0.78rem',
-            fontWeight: 600,
+            gap: '4px',
+            padding: '12px 14px',
+            borderRadius: '10px',
+            background: 'linear-gradient(135deg, rgba(15, 118, 110, 0.15) 0%, rgba(30, 41, 59, 0.4) 100%)',
+            border: '1px solid rgba(45, 212, 191, 0.35)',
+            color: '#f8fafc',
             cursor: 'pointer',
+            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
+            transition: 'all 0.15s ease',
           }}
         >
-          <Cpu size={14} color="#14b8a6" />
-          Use Pre-Funded Developer Testnet Account
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 700, fontSize: '0.85rem' }}>
+            <Cpu size={16} color="#2dd4bf" />
+            <span>Connect Pre-Funded Aptos Testnet Account</span>
+          </div>
+          <span style={{ fontSize: '0.72rem', color: '#94a3b8' }}>
+            Instant access with 10.00 APT • Test contract deployment & signing now
+          </span>
         </button>
 
       </div>

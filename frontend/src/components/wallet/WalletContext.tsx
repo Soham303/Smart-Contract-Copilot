@@ -94,8 +94,8 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     try {
       if (typeof window === 'undefined') return false;
 
-      // Detect provider with up to 1.5s tolerance to handle extension injection
-      const petra = await detectPetraWallet(1500);
+      // Detect provider with up to 2.5s tolerance to handle extension injection
+      const petra = await detectPetraWallet(2500);
 
       // If Petra extension is not detected in browser
       if (!petra) {

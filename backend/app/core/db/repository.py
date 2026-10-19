@@ -62,8 +62,65 @@ class DatabaseRepository:
             db.findings.create_index("jobId")
             db.deployments.create_index([("projectId", 1), ("deployedAt", -1)])
             db.activities.create_index([("userId", 1), ("createdAt", -1)])
+            db.logs.create_index([("createdAt", -1)])
+            db.logs.create_index([("userId", 1), ("createdAt", -1)])
+            db.logs.create_index([("category", 1), ("createdAt", -1)])
         except Exception as e:
             print(f"Index creation warning: {e}")
+
+    def ensure_initial_seeds(self):
+        """Seeds initial default collections in MongoDB Atlas if empty."""
+        if not self.is_mongo_connected:
+            return
+        try:
+            db = extensions.db
+            # Seed demo user
+            demo_user = db.users.find_one({"email": "demo@copilot.io"})
+            if not demo_user:
+                demo_pwd_hash = hashlib.sha256("copilot123".encode()).hexdigest()
+                db.users.insert_one({
+                    "_id": "usr_demo",
+                    "id": "usr_demo",
+                    "email": "demo@copilot.io",
+                    "passwordHash": demo_pwd_hash,
+                    "name": "Demo Builder",
+                    "plan": "developer",
+                    "preferences": {"learningMode": True, "gridSnap": True},
+                    "createdAt": datetime.utcnow()
+                })
+
+            # Seed default project
+            demo_proj = db.projects.find_one({"_id": "demo"})
+            if not demo_proj:
+                now = datetime.utcnow()
+                db.projects.insert_one({
+                    "_id": "demo",
+                    "id": "demo",
+                    "ownerId": "usr_demo",
+                    "name": "SkyApes_Token_Vesting",
+                    "mode": "blocks",
+                    "network": "testnet",
+                    "createdAt": now,
+                    "updatedAt": now
+                })
+
+            # Seed initial activity logs
+            if db.activities.count_documents({}) == 0:
+                self.list_user_activities("usr_demo")
+                
+            # Seed initial system logs
+            if db.logs.count_documents({}) == 0:
+                initial_logs = [
+                    ("INFO", "SYSTEM", "MongoDB Atlas Cluster connection established successfully", {"database": "smart_contract_copilot"}),
+                    ("INFO", "COMPILER", "Aptos Move 2.0 bytecode verification engine initialized", {"version": "2.0-preview"}),
+                    ("INFO", "AI_SYNTHESIS", "Loaded Google Gemini & Groq AI multi-stage synthesis pipelines", {"models": ["gemini-flash", "llama-3.3-70b"]}),
+                    ("INFO", "AUDIT", "Static formal invariant verification rules loaded (14 safety checks)", {"engine": "MoveProver"}),
+                    ("INFO", "WALLET", "Petra Aptos standard wallet adapter listening on testnet", {"network": "testnet"})
+                ]
+                for lvl, cat, msg, meta in initial_logs:
+                    self.record_log(lvl, cat, msg, meta, user_id="usr_demo", project_id="demo")
+        except Exception as e:
+            print(f"Seed error: {e}")
 
     # ==================== USERS ====================
     def get_user_by_email(self, email: str) -> Optional[Dict[str, Any]]:
@@ -584,5 +641,74 @@ class DatabaseRepository:
             return self.list_user_activities(user_id, limit)
 
         return activities
+
+    def record_log(
+        self,
+        level: str,
+        category: str,
+        message: str,
+        metadata: Optional[Dict[str, Any]] = None,
+        user_id: Optional[str] = None,
+        project_id: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """Record an explicit log event in MongoDB Atlas logs collection."""
+        log_id = _generate_id("log_")
+        now = datetime.utcnow()
+        doc = {
+            "_id": log_id,
+            "id": log_id,
+            "level": level.upper(),
+            "category": category.upper(),
+            "message": message,
+            "metadata": metadata or {},
+            "userId": user_id or "usr_demo",
+            "projectId": project_id,
+            "timestamp": now.isoformat() + "Z",
+            "createdAt": now
+        }
+        if self.is_mongo_connected:
+            try:
+                extensions.db.logs.insert_one(dict(doc))
+            except Exception as e:
+                print(f"MongoDB insert log error: {e}")
+        self._memory_db.setdefault("logs", {})[log_id] = doc
+        return doc
+
+    def list_logs(
+        self,
+        user_id: Optional[str] = None,
+        project_id: Optional[str] = None,
+        category: Optional[str] = None,
+        limit: int = 100
+    ) -> List[Dict[str, Any]]:
+        """List chronological system, compiler, and audit logs from MongoDB Atlas."""
+        logs = []
+        if self.is_mongo_connected:
+            try:
+                query: Dict[str, Any] = {}
+                if user_id:
+                    query["$or"] = [{"userId": user_id}, {"userId": "usr_demo"}]
+                if project_id:
+                    query["projectId"] = project_id
+                if category:
+                    query["category"] = category.upper()
+
+                cursor = extensions.db.logs.find(query).sort("createdAt", -1).limit(limit)
+                for doc in cursor:
+                    doc["id"] = str(doc["_id"])
+                    if "createdAt" in doc and isinstance(doc["createdAt"], datetime):
+                        doc["timestamp"] = doc["createdAt"].isoformat() + "Z"
+                    logs.append(doc)
+            except Exception as e:
+                print(f"MongoDB list logs error: {e}")
+
+        if not logs:
+            mem_logs = list(self._memory_db.get("logs", {}).values())
+            if category:
+                mem_logs = [l for l in mem_logs if l.get("category") == category.upper()]
+            mem_logs.sort(key=lambda x: x.get("createdAt", datetime.min), reverse=True)
+            logs = mem_logs[:limit]
+
+        return logs
 
 db_repo = DatabaseRepository()

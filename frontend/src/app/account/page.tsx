@@ -23,7 +23,7 @@ import {
   Shield,
   RefreshCw,
 } from 'lucide-react';
-import { fetchDeployments, fetchUserActivities } from '../../lib/api';
+import { fetchDeployments, fetchUserActivities, fetchSystemLogs } from '../../lib/api';
 import { useWallet } from '../../components/wallet/WalletContext';
 
 export default function AccountHubPage() {
@@ -45,7 +45,8 @@ export default function AccountHubPage() {
   const [toggleMoveProver, setToggleMoveProver] = useState(true);
   const [toggleGasTelemetry, setToggleGasTelemetry] = useState(true);
   const [activitiesList, setActivitiesList] = useState<any[]>([]);
-  const [activityFilter, setActivityFilter] = useState<'all' | 'deploy' | 'audit' | 'ai'>('all');
+  const [logsList, setLogsList] = useState<any[]>([]);
+  const [activityFilter, setActivityFilter] = useState<'all' | 'deploy' | 'audit' | 'ai' | 'logs'>('all');
   const [activitiesLoading, setActivitiesLoading] = useState(false);
   const [deploymentsList, setDeploymentsList] = useState<any[]>([
     {
@@ -133,8 +134,12 @@ export default function AccountHubPage() {
       if (res && res.activities && res.activities.length > 0) {
         setActivitiesList(res.activities);
       }
+      const logsRes = await fetchSystemLogs();
+      if (logsRes && logsRes.logs && logsRes.logs.length > 0) {
+        setLogsList(logsRes.logs);
+      }
     } catch (err) {
-      console.warn('Could not load activities:', err);
+      console.warn('Could not load activities or system logs:', err);
     } finally {
       setActivitiesLoading(false);
     }
@@ -576,7 +581,7 @@ export default function AccountHubPage() {
             </div>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              {(['all', 'deploy', 'audit', 'ai'] as const).map((filterKey) => (
+              {(['all', 'deploy', 'audit', 'ai', 'logs'] as const).map((filterKey) => (
                 <button
                   key={filterKey}
                   onClick={() => setActivityFilter(filterKey)}
@@ -593,7 +598,15 @@ export default function AccountHubPage() {
                     textTransform: 'capitalize',
                   }}
                 >
-                  {filterKey === 'all' ? 'All Activities' : filterKey === 'ai' ? 'AI Synthesis' : filterKey === 'deploy' ? 'Deployments' : 'Audits'}
+                  {filterKey === 'all'
+                    ? 'All Activities'
+                    : filterKey === 'ai'
+                    ? 'AI Synthesis'
+                    : filterKey === 'deploy'
+                    ? 'Deployments'
+                    : filterKey === 'logs'
+                    ? 'Atlas DB Logs'
+                    : 'Audits'}
                 </button>
               ))}
 
@@ -618,7 +631,72 @@ export default function AccountHubPage() {
           </div>
 
           <div style={{ padding: '20px' }}>
-            {activitiesLoading && activitiesList.length === 0 ? (
+            {activityFilter === 'logs' ? (
+              logsList.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '2rem 0', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
+                  No system logs recorded yet in MongoDB Atlas.
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {logsList.map((log, idx) => {
+                    const isError = log.level === 'ERROR';
+                    const isWarn = log.level === 'WARN';
+                    const badgeBg = isError ? 'rgba(239, 68, 68, 0.12)' : isWarn ? 'rgba(245, 158, 11, 0.12)' : 'rgba(16, 185, 129, 0.12)';
+                    const badgeColor = isError ? '#ef4444' : isWarn ? '#f59e0b' : '#10b981';
+                    return (
+                      <div
+                        key={log.id || idx}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'flex-start',
+                          justifyContent: 'space-between',
+                          gap: '12px',
+                          padding: '10px 14px',
+                          borderRadius: '8px',
+                          background: 'var(--surface)',
+                          border: '1px solid var(--border-subtle)',
+                          fontFamily: 'var(--font-mono)',
+                          fontSize: '0.78rem',
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                          <span
+                            style={{
+                              padding: '2px 6px',
+                              borderRadius: '4px',
+                              background: badgeBg,
+                              color: badgeColor,
+                              fontWeight: 700,
+                              fontSize: '0.68rem',
+                            }}
+                          >
+                            {log.level || 'INFO'}
+                          </span>
+                          <span
+                            style={{
+                              padding: '2px 6px',
+                              borderRadius: '4px',
+                              background: 'var(--surface-container-low)',
+                              color: 'var(--primary)',
+                              fontWeight: 600,
+                              fontSize: '0.68rem',
+                            }}
+                          >
+                            {log.category || 'SYSTEM'}
+                          </span>
+                          <span style={{ color: 'var(--text-primary)', fontWeight: 500 }}>
+                            {log.message}
+                          </span>
+                        </div>
+                        <span style={{ color: 'var(--text-muted)', fontSize: '0.7rem', flexShrink: 0 }}>
+                          {log.timestamp ? new Date(log.timestamp).toLocaleTimeString() : 'Recent'}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )
+            ) : activitiesLoading && activitiesList.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '2rem 0', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
                 Loading activity audit trail...
               </div>
